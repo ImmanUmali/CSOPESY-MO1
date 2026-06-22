@@ -1,5 +1,5 @@
-#ifndef ISYSTEMCONTEXT_H
-#define ISYSTEMCONTEXT_H
+#pragma once
+
 
 #include <string>
 
@@ -26,5 +26,3 @@ public:
     virtual void setAttachedProcess(const std::string& processName) = 0;
     virtual std::string getAttachedProcess() const = 0;
 };
-
-#endif // ISYSTEMCONTEXT_H

@@ -55,43 +55,41 @@ void ConsoleShell::run() {
 
     std::string rawInputLine;
 
-    // Primary REPL Executive Loop
+   
     while (!shouldExit()) {
-        // Output prompt token as specified
         std::cout << "root:\\> ";
 
         if (!std::getline(std::cin, rawInputLine)) {
-            break; // Handle EOF / Stream closures gracefully
+            break; 
         }
 
         std::vector<std::string> tokens = tokenizeInput(rawInputLine);
 
-        // If the user hit enter without typing anything, loop back smoothly
+		// user did not enter any text, just hit enter
         if (tokens.empty()) {
             continue;
         }
 
         std::string commandToken = tokens[0];
 
-        // Extract arguments (everything after the primary command token)
+        // Extract tokenized command
         std::vector<std::string> commandArgs(tokens.begin() + 1, tokens.end());
 
-        // Check if command exists in registry
+        // find command
         auto it = m_commandRegistry.find(commandToken);
         if (it != m_commandRegistry.end()) {
             ICommand* commandToExecute = it->second.get();
 
-            // Guardrail validation check: Lock out systems if not initialized
+            
             if (!isInitialized() && !commandToExecute->isBypassingInitialization()) {
                 std::cout << "Error: You must run the \"initialize\" command before performing this action.\n" << std::endl;
             }
             else {
-                // Dynamic Dispatch execute call
                 commandToExecute->execute(*this, commandArgs);
             }
         }
         else {
-            // Unrecognized user strings
+            // Unrecognized
             if (!isInitialized()) {
                 std::cout << "Error: Command not recognized. System requires \"initialize\" first.\n" << std::endl;
             }

@@ -1,5 +1,5 @@
-#ifndef CONSOLESHELL_H
-#define CONSOLESHELL_H
+#pragma once
+
 
 #include "ISystemContext.h"
 #include "ICommand.h"
@@ -17,7 +17,7 @@ private:
     // Registry database mapping text tokens to command behaviors
     std::unordered_map<std::string, CommandPtr> m_commandRegistry;
 
-    // Utility text parsing methods
+	// Tokenize input string into command and arguments
     std::vector<std::string> tokenizeInput(const std::string& rawInput);
     void registerCommand(CommandPtr command);
     void setupCommands();
@@ -36,10 +36,6 @@ public:
     void setAttachedProcess(const std::string& processName) override { m_attachedProcessName = processName; }
     std::string getAttachedProcess() const override { return m_attachedProcessName; }
 
-    /**
-     * @brief Boots up the interactive terminal and runs the primary REPL execution block.
-     */
+    
     void run();
 };
-
-#endif // CONSOLESHELL_H

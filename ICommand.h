@@ -1,11 +1,9 @@
-#ifndef ICOMMAND_H
-#define ICOMMAND_H
+#pragma once
 
 #include <string>
 #include <vector>
 #include <memory>
 
-// Forward declaration of the system context to prevent circular dependencies
 class ISystemContext;
 
 class ICommand {
@@ -31,5 +29,3 @@ public:
 };
 
 using CommandPtr = std::unique_ptr<ICommand>;
-
-#endif // ICOMMAND_H

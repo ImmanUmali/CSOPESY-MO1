@@ -1,11 +1,10 @@
-#ifndef CORECOMMANDS_H
-#define CORECOMMANDS_H
+#pragma once
+
 
 #include "ICommand.h"
 #include "ISystemContext.h"
 #include <iostream>
 
-// --- EXIT COMMAND ---
 class ExitCommand : public ICommand {
 public:
     std::string getName() const override { return "exit"; }
@@ -17,11 +16,10 @@ public:
     }
 };
 
-// --- INITIALIZE COMMAND ---
 class InitializeCommand : public ICommand {
 public:
     std::string getName() const override { return "initialize"; }
-    bool isBypassingInitialization() const override { return true; } // Must run first to unlock system 
+    bool isBypassingInitialization() const override { return true; }
 
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
         if (context.isInitialized()) {
@@ -38,5 +36,3 @@ public:
         std::cout << "System initialized successfully. All operational routines unlocked." << std::endl;
     }
 };
-
-#endif // CORECOMMANDS_H
