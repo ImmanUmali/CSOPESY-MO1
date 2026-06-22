@@ -21,6 +21,9 @@
     <ClCompile Include="ConsoleShell.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConfigLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ICommand.h">
@@ -32,5 +35,14 @@
     <ClInclude Include="CoreCommands.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="ConfigStructure.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigLoader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config.txt" />
   </ItemGroup>
 </Project>

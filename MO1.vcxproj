@@ -139,13 +139,19 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConfigLoader.cpp" />
     <ClCompile Include="ConsoleShell.cpp" />
     <ClCompile Include="MO1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigLoader.h" />
+    <ClInclude Include="ConfigStructure.h" />
     <ClInclude Include="ConsoleShell.h" />
     <ClInclude Include="CoreCommands.h" />
     <ClInclude Include="ICommand.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

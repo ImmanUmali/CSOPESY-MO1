@@ -35,6 +35,22 @@ std::vector<std::string> ConsoleShell::tokenizeInput(const std::string& rawInput
     return tokens;
 }
 
+void ConsoleShell::setConfig(const SystemConfig& config) {
+    m_systemConfig = config;
+}
+
+SystemConfig ConsoleShell::getConfig() const {
+    return m_systemConfig;
+}
+
+void ConsoleShell::setAttachedProcess(const std::string& processName) {
+    m_attachedProcessName = processName;
+}
+
+std::string ConsoleShell::getAttachedProcess() const {
+    return m_attachedProcessName;
+}
+
 void ConsoleShell::run() {
     std::cout << "  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$  /$$$$$$  /$$     /$$\n";
     std::cout << " /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/ /$$__  $$|  $$   /$$/\n";

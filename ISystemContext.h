@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "ConfigStructure.h"
 #include <string>
 
 enum class TerminalView {
@@ -25,4 +25,7 @@ public:
     virtual void changeView(TerminalView newView) = 0;
     virtual void setAttachedProcess(const std::string& processName) = 0;
     virtual std::string getAttachedProcess() const = 0;
+
+    virtual void setConfig(const SystemConfig& config) = 0;
+    virtual SystemConfig getConfig() const = 0;
 };

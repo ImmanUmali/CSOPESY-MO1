@@ -1,14 +1,14 @@
 #pragma once
 
-
 #include "ICommand.h"
 #include "ISystemContext.h"
+#include "ConfigLoader.h"
 #include <iostream>
 
 class ExitCommand : public ICommand {
 public:
     std::string getName() const override { return "exit"; }
-    bool isBypassingInitialization() const override { return true; } // 'exit' can run anytime 
+    bool isBypassingInitialization() const override { return true; }
 
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
         std::cout << "Terminating CSOPESY Emulator console..." << std::endl;
@@ -27,12 +27,24 @@ public:
             return;
         }
 
-        std::cout << "Attempting to read configuration from 'config.txt'..." << std::endl;
+        SystemConfig parsedConfig;
+        if (!ConfigLoader::loadAndValidate("config.txt", parsedConfig)) {
+            std::cout << "Initialization Failed. System remains locked down.\n" << std::endl;
+            return;
+        }
 
-        // NOTE: File system verification and full parameter structural loading 
-        // will be mapped out comprehensively in Milestone 2.
-
+        // Apply configuration states to system context environment
+        context.setConfig(parsedConfig);
         context.setInitialized(true);
-        std::cout << "System initialized successfully. All operational routines unlocked." << std::endl;
+
+        std::cout << "System initialized successfully via 'config.txt'!\n";
+        std::cout << "-------------------------------------------\n";
+        std::cout << " Cores Available     : " << parsedConfig.numCpu << "\n";
+        std::cout << " Selected Scheduler  : " << parsedConfig.scheduler << "\n";
+        std::cout << " Quantum Cycles      : " << parsedConfig.quantumCycles << "\n";
+        std::cout << " Batch Process Freq  : " << parsedConfig.batchProcessFreq << "\n";
+        std::cout << " Instruction Ranges  : [" << parsedConfig.minIns << ", " << parsedConfig.maxIns << "]\n";
+        std::cout << " Execution Delay     : " << parsedConfig.delayPerExec << "\n";
+        std::cout << "-------------------------------------------\n" << std::endl;
     }
 };
