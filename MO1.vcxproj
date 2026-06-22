@@ -142,6 +142,7 @@
     <ClCompile Include="ConfigLoader.cpp" />
     <ClCompile Include="ConsoleShell.cpp" />
     <ClCompile Include="MO1.cpp" />
+    <ClCompile Include="Process.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConfigLoader.h" />
@@ -149,6 +150,9 @@
     <ClInclude Include="ConsoleShell.h" />
     <ClInclude Include="CoreCommands.h" />
     <ClInclude Include="ICommand.h" />
+    <ClInclude Include="Instruction.h" />
+    <ClInclude Include="MultiplexerCommands.h" />
+    <ClInclude Include="Process.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="config.txt" />

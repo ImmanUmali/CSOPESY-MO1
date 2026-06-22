@@ -1,5 +1,6 @@
 #include "ConsoleShell.h"
 #include "CoreCommands.h"
+#include "MultiplexerCommands.h"
 #include <iostream>
 #include <sstream>
 
@@ -18,9 +19,20 @@ void ConsoleShell::registerCommand(CommandPtr command) {
 }
 
 void ConsoleShell::setupCommands() {
-    // Register the two core functional pieces for Milestone 1
     registerCommand(std::make_unique<ExitCommand>());
     registerCommand(std::make_unique<InitializeCommand>());
+    registerCommand(std::make_unique<ScreenCommand>());
+    registerCommand(std::make_unique<ProcessSmiCommand>());
+
+}
+
+Process* ConsoleShell::findProcess(const std::string& name) {
+    for (auto& proc : m_processList) {
+        if (proc->getName() == name) {
+            return proc.get();
+        }
+    }
+    return nullptr;
 }
 
 std::vector<std::string> ConsoleShell::tokenizeInput(const std::string& rawInput) {
@@ -73,45 +85,49 @@ void ConsoleShell::run() {
 
    
     while (!shouldExit()) {
-        std::cout << "root:\\> ";
-
+        // Adjust the console interface prompt dynamically based on view state
+        if (m_currentView == TerminalView::MAIN_MENU) {
+            std::cout << "root:\\> ";
+        } else {
+            std::cout << "root:\\" << m_attachedProcessName << "\\> ";
+        }
+        
         if (!std::getline(std::cin, rawInputLine)) {
-            break; 
+            break;
         }
 
         std::vector<std::string> tokens = tokenizeInput(rawInputLine);
-
-		// user did not enter any text, just hit enter
-        if (tokens.empty()) {
-            continue;
-        }
+        if (tokens.empty()) continue;
 
         std::string commandToken = tokens[0];
-
-        // Extract tokenized command
         std::vector<std::string> commandArgs(tokens.begin() + 1, tokens.end());
 
-        // find command
+        // View Context Rules Engine Intervention
+        if (m_currentView == TerminalView::SCREEN_MULTIPLEXER) {
+            if (commandToken == "exit") {
+                // Intercept 'exit' inside process sub-screens to return to main menu
+                std::cout << "Exiting process screen view and returning to main menu.\n" << std::endl;
+                m_currentView = TerminalView::MAIN_MENU;
+                m_attachedProcessName = "";
+                continue;
+            }
+            if (commandToken != "process-smi") {
+                std::cout << "Error: Unrecognized command. Sub-screens only support 'process-smi' and 'exit'.\n" << std::endl;
+                continue;
+            }
+        }
+
         auto it = m_commandRegistry.find(commandToken);
         if (it != m_commandRegistry.end()) {
             ICommand* commandToExecute = it->second.get();
 
-            
             if (!isInitialized() && !commandToExecute->isBypassingInitialization()) {
                 std::cout << "Error: You must run the \"initialize\" command before performing this action.\n" << std::endl;
-            }
-            else {
+            } else {
                 commandToExecute->execute(*this, commandArgs);
             }
-        }
-        else {
-            // Unrecognized
-            if (!isInitialized()) {
-                std::cout << "Error: Command not recognized. System requires \"initialize\" first.\n" << std::endl;
-            }
-            else {
-                std::cout << "Error: Command \"" << commandToken << "\" not found.\n" << std::endl;
-            }
+        } else {
+            std::cout << "Error: Command \"" << commandToken << "\" not found.\n" << std::endl;
         }
     }
 }

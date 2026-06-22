@@ -3,9 +3,11 @@
 #include "ISystemContext.h"
 #include "ICommand.h"
 #include "ConfigStructure.h"
+#include "Process.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <memory>
 
 class ConsoleShell : public ISystemContext {
 private:
@@ -15,7 +17,11 @@ private:
     SystemConfig m_systemConfig;
 
     std::string m_attachedProcessName;
+    int m_pidCounter;
+
     std::unordered_map<std::string, CommandPtr> m_commandRegistry;
+
+    std::vector<std::unique_ptr<Process>> m_processList;
 
     std::vector<std::string> tokenizeInput(const std::string& rawInput);
     void registerCommand(CommandPtr command);
@@ -37,6 +43,11 @@ public:
 
     void setAttachedProcess(const std::string& processName) override;
     std::string getAttachedProcess() const override;
+
+    int generateNextPid() { return ++m_pidCounter; }
+    void addProcess(std::unique_ptr<Process> proc) { m_processList.push_back(std::move(proc)); }
+
+    Process* findProcess(const std::string& name);
 
     void run();
 };
