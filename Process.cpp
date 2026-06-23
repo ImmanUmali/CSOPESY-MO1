@@ -80,3 +80,32 @@ Process::Process(int pid, const std::string& name, uint32_t minIns, uint32_t max
     // Default configuration log requirement matching project parameters
     m_logs.push_back("Hello world from " + m_name + "!"); // 
 }
+
+void Process::setState(ProcessState state) {
+    m_state = state;
+}
+
+void Process::addLog(const std::string& message) {
+    m_logs.push_back(message);
+}
+
+void Process::executeNextLine() {
+    if (isFinished())
+        return;
+
+    m_state = ProcessState::RUNNING;
+
+    addLog(
+        "Executed instruction #" +
+        std::to_string(m_commandCounter + 1)
+    );
+
+    m_commandCounter++;
+
+    if (m_commandCounter >= m_linesOfCode)
+    {
+        m_state = ProcessState::FINISHED;
+
+        addLog("Process completed.");
+    }
+}

@@ -29,6 +29,7 @@ public:
     std::string getTimestamp() const { return m_timestamp; }
 
     void addLog(const std::string& message);
-    void executeNextLine(); // To be driven by the scheduler in Milestone 4
+    void executeNextLine();
     bool isFinished() const { return m_commandCounter >= m_linesOfCode; }
+    void setState(ProcessState state);
 };
