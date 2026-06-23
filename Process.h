@@ -25,7 +25,7 @@ public:
     ProcessState getState() const { return m_state; }
     size_t getCommandCounter() const { return m_commandCounter; }
     size_t getLinesOfCode() const { return m_linesOfCode; }
-    const std::vector<std::string>& getLogs() const { return m_logs; }
+    const std::vector<std::string>& getLogs() const { return m_logs; } 
     std::string getTimestamp() const { return m_timestamp; }
 
     void addLog(const std::string& message);
