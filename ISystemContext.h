@@ -28,4 +28,6 @@ public:
 
     virtual void setConfig(const SystemConfig& config) = 0;
     virtual SystemConfig getConfig() const = 0;
+    virtual std::shared_ptr<Scheduler> getScheduler() = 0;
+    virtual void setScheduler(std::shared_ptr<Scheduler> scheduler) = 0;
 };

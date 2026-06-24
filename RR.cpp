@@ -1,13 +1,15 @@
-#include "RoundRobinScheduler.h"
+#include "RR.h"
 
 RoundRobinScheduler::RoundRobinScheduler(unsigned int quantum): m_quantum(quantum) {
 }
 
 void RoundRobinScheduler::addProcess(std::shared_ptr<Process> process) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_readyQueue.push(process);
 }
 
 std::shared_ptr<Process> RoundRobinScheduler::getNextProcess() {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_readyQueue.empty())
         return nullptr;
 
