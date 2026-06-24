@@ -28,7 +28,7 @@ public:
         }
 
         SystemConfig parsedConfig;
-        if (!ConfigLoader::loadAndValidate("config.txt", parsedConfig)) {
+        if (!ConfigLoader::loadAndValidate("config2.txt", parsedConfig)) {
             std::cout << "Initialization Failed. System remains locked down.\n" << std::endl;
             return;
         }

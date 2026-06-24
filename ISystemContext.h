@@ -2,6 +2,9 @@
 
 #include "ConfigStructure.h"
 #include <string>
+#include <memory>
+
+class Scheduler;
 
 enum class TerminalView {
     MAIN_MENU,

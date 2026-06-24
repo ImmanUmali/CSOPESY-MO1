@@ -8,7 +8,9 @@ ConsoleShell::ConsoleShell()
     : m_initialized(false),
     m_exitFlag(false),
     m_currentView(TerminalView::MAIN_MENU),
-    m_attachedProcessName("") {
+    m_attachedProcessName(""),
+    m_pidCounter(0),
+    m_scheduler(nullptr) {
     setupCommands();
 }
 
@@ -23,6 +25,9 @@ void ConsoleShell::setupCommands() {
     registerCommand(std::make_unique<InitializeCommand>());
     registerCommand(std::make_unique<ScreenCommand>());
     registerCommand(std::make_unique<ProcessSmiCommand>());
+    registerCommand(std::make_unique<SchedulerStartCommand>());
+    registerCommand(std::make_unique<SchedulerStopCommand>());
+    registerCommand(std::make_unique<ReportUtilCommand>());
 
 }
 
@@ -71,7 +76,7 @@ void ConsoleShell::run() {
     std::cout << "| $$       \\____  $$| $$  | $$| $$____/ | $$__/    \\____  $$   \\  $$/   \n";
     std::cout << "| $$    $$ /$$  \\ $$| $$  | $$| $$      | $$       /$$  \\ $$    | $$    \n";
     std::cout << "|  $$$$$$/|  $$$$$$/|  $$$$$$/| $$      | $$$$$$$$|  $$$$$$/    | $$    \n";
-    std::cout << " \\______/  \\______/  \______/ |__/      |________/ \\______/     |__/    \n";
+    std::cout << " \\______/  \\______/  \\______/ |__/      |________/ \\______/     |__/    \n";
                                                                         
                                                                         
                                                                         

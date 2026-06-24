@@ -87,6 +87,10 @@ void Process::setState(ProcessState state) {
 
 void Process::addLog(const std::string& message) {
     m_logs.push_back(message);
+
+    if (m_logs.size() > 5) {
+        m_logs.erase(m_logs.begin());
+    }
 }
 
 void Process::executeNextLine() {

@@ -9,6 +9,8 @@
 #include <string>
 #include <memory>
 
+class Scheduler;
+
 class ConsoleShell : public ISystemContext {
 private:
     bool m_initialized;
@@ -21,7 +23,10 @@ private:
 
     std::unordered_map<std::string, CommandPtr> m_commandRegistry;
 
-    std::vector<std::unique_ptr<Process>> m_processList;
+    // std::vector<std::unique_ptr<Process>> m_processList;
+    std::vector<std::shared_ptr<Process>> m_processList;
+
+    std::shared_ptr<Scheduler> m_scheduler;
 
     std::vector<std::string> tokenizeInput(const std::string& rawInput);
     void registerCommand(CommandPtr command);
@@ -45,9 +50,13 @@ public:
     std::string getAttachedProcess() const override;
 
     int generateNextPid() { return ++m_pidCounter; }
-    void addProcess(std::unique_ptr<Process> proc) { m_processList.push_back(std::move(proc)); }
+    // void addProcess(std::unique_ptr<Process> proc) { m_processList.push_back(std::move(proc)); }
+    void addProcess(std::shared_ptr<Process> proc) { m_processList.push_back(proc); }
 
     Process* findProcess(const std::string& name);
 
     void run();
+
+    std::shared_ptr<Scheduler> getScheduler() override { return m_scheduler; }
+    void setScheduler(std::shared_ptr<Scheduler> scheduler) override { m_scheduler = scheduler; }
 };

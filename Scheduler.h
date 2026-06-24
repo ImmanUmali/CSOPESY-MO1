@@ -5,8 +5,8 @@
 #include <atomic>
 #include <memory>
 #include "CPUCore.h"
-#include "FCFSScheduler.h"
-#include "RoundRobinScheduler.h"
+#include "FCFS.h"
+#include "RR.h"
 
 class Scheduler {
 private:
@@ -21,6 +21,14 @@ private:
     std::atomic<bool> m_running;
     std::thread m_schedulerThread;           // The Scheduler Thread
 
+    std::atomic<bool> m_generationEnabled{false};
+    unsigned int m_batchProcessFreq{1};
+    uint32_t m_minIns{0};
+    uint32_t m_maxIns{0};
+    std::atomic<int> m_generatedPidCounter{0};
+    mutable std::mutex m_schedulerMutex; 
+    std::vector<std::shared_ptr<Process>> m_allTrackedProcesses; // Universal tracker for screen -ls
+
     void threadLoop();                       // Background execution loop
 
 public:
@@ -33,4 +41,21 @@ public:
 
     unsigned int getCpuCycles() const { return m_cpuCycles.load(); }
     const std::vector<CPUCore>& getCores() const { return m_cpuCores; }
+
+    void setGenerationParameters(unsigned int freq, uint32_t minI, uint32_t maxI, int initialPidOffset) {
+        m_batchProcessFreq = freq;
+        m_minIns = minI;
+        m_maxIns = maxI;
+        m_generatedPidCounter = initialPidOffset;
+    }
+
+    void startGeneration() { m_generationEnabled = true; }
+    void stopGeneration() { m_generationEnabled = false; }
+    bool isGenerationEnabled() const { return m_generationEnabled.load(); }
+    
+    // Thread-safe accessors for Dashboard Metrics
+    std::vector<std::shared_ptr<Process>> getAllTrackedProcesses() const {
+        std::lock_guard<std::mutex> lock(m_schedulerMutex);
+        return m_allTrackedProcesses;
+    }
 };
