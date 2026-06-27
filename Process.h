@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <unordered_map>
 #include "Instruction.h"
 
 enum class ProcessState { READY, RUNNING, WAITING, FINISHED };
@@ -16,6 +17,8 @@ private:
     std::vector<Instruction> m_instructions;
     std::vector<std::string> m_logs;
     std::string m_timestamp;
+    std::unordered_map<std::string, int> m_symbolTable;
+    void evaluateInstruction(const Instruction& ins, int coreId);
 
 public:
     Process(int pid, const std::string& name, uint32_t minIns, uint32_t maxIns);
@@ -29,7 +32,7 @@ public:
     std::string getTimestamp() const { return m_timestamp; }
 
     void addLog(const std::string& message);
-    void executeNextLine();
+    void executeNextLine(int coreId);
     bool isFinished() const { return m_commandCounter >= m_linesOfCode; }
     void setState(ProcessState state);
 };

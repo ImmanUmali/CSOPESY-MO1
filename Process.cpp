@@ -3,22 +3,16 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <iostream>
 
-// TODO: Address comments once Process.cpp has been finalized
-
-// Local random generation state wrappers
 static std::random_device rd;
 static std::mt19937 gen(rd());
-
 
 std::string getCurrentTimestampString() {
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
 
-    // Formats matching standard system timestamps: YYYY-MM-DD HH:MM:SS
-    // Note: If your compiler complains about localtime being unsafe, 
-    // you can use localtime_s on Windows/MSVC or localtime_r on Linux.
     struct tm buf;
 #if defined(_MSC_VER)
     localtime_s(&buf, &in_time_t);
@@ -30,30 +24,34 @@ std::string getCurrentTimestampString() {
     return ss.str();
 }
 
-// Helper function to recursively build instructions up to the max nesting depth
 Instruction generateRandomInstruction(int currentDepth) {
-    std::uniform_int_distribution<int> opDist(0, 5); // Now covers 0 to 5 (including FOR)
+    std::uniform_int_distribution<int> opDist(0, 5);
     OpCode randomOp = static_cast<OpCode>(opDist(gen));
 
-    // Force a non-FOR instruction if we have hit the maximum nested limit of 3
     if (randomOp == OpCode::FOR && currentDepth >= 3) {
-        std::uniform_int_distribution<int> linearOpDist(0, 4); // Fallback to non-FOR
+        std::uniform_int_distribution<int> linearOpDist(0, 4);
         randomOp = static_cast<OpCode>(linearOpDist(gen));
     }
 
     Instruction ins;
     ins.op = randomOp;
 
+    // Generate dummy token arguments for simulated expressions
+    if (ins.op == OpCode::DECLARE) {
+        ins.args = { "x", "0" };
+    }
+    else if (ins.op == OpCode::ADD || ins.op == OpCode::SUBTRACT) {
+        ins.args = { "x", "1" };
+    }
+
     if (ins.op == OpCode::FOR) {
-        std::uniform_int_distribution<uint32_t> loopDist(2, 10); // Loop iterations counter
+        std::uniform_int_distribution<uint32_t> loopDist(2, 5);
         ins.repeatCount = loopDist(gen);
 
-        // Randomize how many lines of instructions exist inside this specific FOR block
-        std::uniform_int_distribution<size_t> childLinesDist(1, 5);
+        std::uniform_int_distribution<size_t> childLinesDist(1, 3);
         size_t linesInBlock = childLinesDist(gen);
 
         for (size_t i = 0; i < linesInBlock; ++i) {
-            // Generate a nested child instruction, tracking the increased depth
             ins.childInstructions.push_back(generateRandomInstruction(currentDepth + 1));
         }
     }
@@ -72,13 +70,14 @@ Process::Process(int pid, const std::string& name, uint32_t minIns, uint32_t max
     std::uniform_int_distribution<size_t> dist(minIns, maxIns);
     m_linesOfCode = dist(gen);
 
-    // Build the master instruction sequence
     for (size_t i = 0; i < m_linesOfCode; ++i) {
-        m_instructions.push_back(generateRandomInstruction(1)); // Start at depth level 1
+        m_instructions.push_back(generateRandomInstruction(1));
     }
 
-    // Default configuration log requirement matching project parameters
-    m_logs.push_back("Hello world from " + m_name + "!"); // 
+    // Default configuration specification baseline log matching exact spacing requirement
+    std::stringstream formattedLog;
+    formattedLog << "(" << m_timestamp << ") Core:0 \"Hello world from " << m_name << "!\"";
+    m_logs.push_back(formattedLog.str());
 }
 
 void Process::setState(ProcessState state) {
@@ -87,29 +86,71 @@ void Process::setState(ProcessState state) {
 
 void Process::addLog(const std::string& message) {
     m_logs.push_back(message);
-
+    // Keep sliding-window constraints maxed at 5 rows per image specifications
     if (m_logs.size() > 5) {
         m_logs.erase(m_logs.begin());
     }
 }
 
-void Process::executeNextLine() {
-    if (isFinished())
-        return;
+void Process::evaluateInstruction(const Instruction& ins, int coreId) {
+    switch (ins.op) {
+    case OpCode::PRINT: {
+        // ONLY PRINT operations generate visible screen history rows
+        std::stringstream formattedLog;
+        formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
+            << "\"Hello world from " << m_name << "!\"";
+        addLog(formattedLog.str());
+        break;
+    }
+    case OpCode::DECLARE: {
+        // Silently processes backend state tracking without logging
+        std::string varName = ins.args.empty() ? "var" : ins.args[0];
+        int initialVal = ins.args.size() < 2 ? 0 : std::stoi(ins.args[1]);
+        m_symbolTable[varName] = initialVal;
+        break;
+    }
+    case OpCode::ADD: {
+        // Silently processes backend state tracking without logging
+        std::string varName = ins.args.empty() ? "var" : ins.args[0];
+        int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
+        m_symbolTable[varName] += val;
+        break;
+    }
+    case OpCode::SUBTRACT: {
+        // Silently processes backend state tracking without logging
+        std::string varName = ins.args.empty() ? "var" : ins.args[0];
+        int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
+        m_symbolTable[varName] -= val;
+        break;
+    }
+    case OpCode::SLEEP: {
+        // Silent cycle tick delay
+        break;
+    }
+    case OpCode::FOR: {
+        // A loop container doesn't log a message itself; it recursively executes its children
+        for (uint32_t r = 0; r < ins.repeatCount; ++r) {
+            for (const auto& child : ins.childInstructions) {
+                evaluateInstruction(child, coreId);
+            }
+        }
+        break;
+    }
+    }
+}
+
+void Process::executeNextLine(int coreId) {
+    if (isFinished()) return;
 
     m_state = ProcessState::RUNNING;
 
-    addLog(
-        "Executed instruction #" +
-        std::to_string(m_commandCounter + 1)
-    );
+    // Fetch the active structural instructions node
+    const Instruction& activeIns = m_instructions[m_commandCounter];
+    evaluateInstruction(activeIns, coreId);
 
     m_commandCounter++;
 
-    if (m_commandCounter >= m_linesOfCode)
-    {
+    if (m_commandCounter >= m_linesOfCode) {
         m_state = ProcessState::FINISHED;
-
-        addLog("Process completed.");
     }
 }

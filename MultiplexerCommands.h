@@ -150,27 +150,27 @@ public:
             return;
         }
 
-        std::cout << "-------------------------------------------\n";
-        std::cout << " Process Name : " << proc->getName() << "\n";
-        std::cout << " ID           : " << proc->getPid() << "\n";
-        std::cout << " Created At   : " << proc->getTimestamp() << "\n";
+        // --- Specs Compliant Output Format with Line Counters ---
+        std::cout << "Process name: " << proc->getName() << "\n";
+        std::cout << "ID: " << proc->getPid() << "\n";
+
+        // Added instruction counters right below the ID:
+        std::cout << "Current Line: " << proc->getCommandCounter() << "\n";
+        std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
+
+        std::cout << "Logs:\n";
+        for (const auto& log : proc->getLogs()) {
+            std::cout << log << "\n";
+        }
+
+        // Clean line break before optional state messages
+        std::cout << "\n";
 
         if (proc->isFinished()) {
-            std::cout << " Status       : Finished!\n";
+            std::cout << "Finished!\n\n";
         }
-        else {
-            std::cout << " Current Line : " << proc->getCommandCounter() << "\n";
-            std::cout << " Total Lines  : " << proc->getLinesOfCode() << "\n";
-        }
-        std::cout << "-------------------------------------------\n";
-        std::cout << " Logs:\n";
-        for (const auto& log : proc->getLogs()) {
-            std::cout << "  > " << log << "\n";
-        }
-        std::cout << "-------------------------------------------\n" << std::endl;
     }
 };
-
 // Milestone 5
 
 class SchedulerStartCommand : public ICommand {

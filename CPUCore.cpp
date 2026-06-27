@@ -13,17 +13,15 @@ void CPUCore::assignProcess(std::shared_ptr<Process> process) {
 }
 
 void CPUCore::executeCycle() {
-    if (!m_currentProcess)
-        return;
-
-    m_currentProcess->executeNextLine();
+    if (isIdle()) return;
 
     m_cyclesExecuted++;
 
-    if (m_currentProcess->isFinished())
-    {
-        m_currentProcess = nullptr;
-        m_cyclesExecuted = 0;
+    m_currentProcess->executeNextLine(m_id);
+
+    if (m_currentProcess->isFinished()) {
+        m_currentProcess->setState(ProcessState::FINISHED);
+        m_currentProcess = nullptr; 
     }
 }
 
