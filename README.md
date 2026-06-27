@@ -7,10 +7,11 @@ This project is an implementation of a Process Multiplexer and CLI in accordance
 - TRIA, Chynna Mae
   
 ### To run the program:
-- Step 0: Locate the `config.txt` file to modify the range of instruction length per process if needed.
-- Step 1: Locate the `MO1.cpp` file (where the main function is located) and run using `Local Windows Debugger`.
-- Step 2: Type `initialize` to start the processor configuration of the application.
-- Step 3: Use commands as you see fit.
+- Step 0: Clone the repository to your Visual Studio environment.
+- Step 1: Locate the `config.txt` file to modify the range of instruction length per process if needed.
+- Step 2: Run using `Local Windows Debugger`.
+- Step 3: Type `initialize` to start the processor configuration of the application.
+- Step 4: Use commands as you see fit.
 
 #### List of Commands available (Case Sensitive):
 - **Main Console Commands**
