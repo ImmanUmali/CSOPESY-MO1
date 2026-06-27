@@ -18,6 +18,7 @@ private:
     std::vector<std::string> m_logs;
     std::string m_timestamp;
     std::unordered_map<std::string, int> m_symbolTable;
+    unsigned int m_remainingSleepTicks = 0;
     void evaluateInstruction(const Instruction& ins, int coreId);
 
 public:
@@ -35,4 +36,8 @@ public:
     void executeNextLine(int coreId);
     bool isFinished() const { return m_commandCounter >= m_linesOfCode; }
     void setState(ProcessState state);
+
+    void decrementSleep() { if (m_remainingSleepTicks > 0) m_remainingSleepTicks--; }
+    unsigned int getRemainingSleep() const { return m_remainingSleepTicks; }
+    void setSleepTicks(unsigned int ticks) { m_remainingSleepTicks = ticks; }
 };

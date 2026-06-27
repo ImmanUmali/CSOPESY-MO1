@@ -183,14 +183,16 @@ public:
         std::cout << "Process name: " << proc->getName() << "\n";
         std::cout << "ID: " << proc->getPid() << "\n";
 
-        // Added instruction counters right below the ID:
-        std::cout << "Current Line: " << proc->getCommandCounter() << "\n";
-        std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
-
+        
         std::cout << "Logs:\n";
         for (const auto& log : proc->getLogs()) {
             std::cout << log << "\n";
         }
+
+        std::cout << '\n';
+        std::cout << "Current Line: " << proc->getCommandCounter() << "\n";
+        std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
+
 
         // Clean line break before optional state messages
         std::cout << "\n";

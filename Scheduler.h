@@ -28,6 +28,7 @@ private:
     std::atomic<int> m_generatedPidCounter{0};
     mutable std::mutex m_schedulerMutex; 
     std::vector<std::shared_ptr<Process>> m_allTrackedProcesses; // Universal tracker for screen -ls
+    std::vector<std::shared_ptr<Process>> m_waitingProcesses;
 
     void threadLoop();                       // Background execution loop
 

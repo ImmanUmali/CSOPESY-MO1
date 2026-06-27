@@ -124,7 +124,13 @@ void Process::evaluateInstruction(const Instruction& ins, int coreId) {
         break;
     }
     case OpCode::SLEEP: {
-        // Silent cycle tick delay
+        // Read arguments or default to a randomized sleep tick constraint (e.g., 5 to 15 ticks)
+        unsigned int ticksToSleep = ins.args.empty() ? 10 : std::stoul(ins.args[0]);
+
+        m_state = ProcessState::WAITING;
+        m_remainingSleepTicks = ticksToSleep;
+
+        
         break;
     }
     case OpCode::FOR: {
