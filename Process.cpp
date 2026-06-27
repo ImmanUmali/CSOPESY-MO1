@@ -160,3 +160,12 @@ void Process::executeNextLine(int coreId) {
         m_state = ProcessState::FINISHED;
     }
 }
+
+void Process::decrementSleepTicks() {
+    if (m_state == ProcessState::WAITING && m_remainingSleepTicks > 0) {
+        m_remainingSleepTicks--;
+        if (m_remainingSleepTicks == 0) {
+            m_state = ProcessState::READY;
+        }
+    }
+}

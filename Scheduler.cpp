@@ -50,111 +50,103 @@ void Scheduler::addProcess(std::shared_ptr<Process> process) {
 
 void Scheduler::threadLoop() {
     while (m_running) {
-        m_cpuCycles++;
-
-        // Automated Process Generation
-        if (m_generationEnabled.load()) {
-            if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
-                int pid = ++m_generatedPidCounter;
-                std::string processName = "p" + std::to_string(pid);
-
-                auto batchProc = std::make_shared<Process>(pid, processName, m_minIns, m_maxIns);
-
-                // Keep the state explicit
-                batchProc->setState(ProcessState::READY);
-
-                {
-                    std::lock_guard<std::mutex> lock(m_schedulerMutex);
-                    m_allTrackedProcesses.push_back(batchProc);
-
-                    if (m_schedulerType == "fcfs") {
-                        m_fcfsScheduler.addProcess(batchProc);
-                    }
-                    else if (m_schedulerType == "rr") {
-                        m_rrScheduler.addProcess(batchProc);
-                    }
-                }
-            }
-        }
-
-        // Variable tracking if work was actually managed this cycle
         bool activeWorkDone = false;
+        
+        m_cpuCycles++; 
 
-        // Scope lock for core pipeline operations
         {
             std::lock_guard<std::mutex> lock(m_schedulerMutex);
 
-            for (auto& cpu : m_cpuCores) {
+            // Automated Process Generation
+            if (m_generationEnabled && (m_cpuCycles % m_batchProcessFreq == 0)) {
+                int nextPid = ++m_generatedPidCounter;
+                std::string procName = "p" + std::to_string(nextPid);
+                
+                auto newProc = std::make_shared<Process>(nextPid, procName, m_minIns, m_maxIns);
+                
+                m_allTrackedProcesses.push_back(newProc);
+
                 if (m_schedulerType == "fcfs") {
-                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
-                        auto proc = m_fcfsScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
-                    }
-
-                    if (!cpu.isIdle()) {
-                        activeWorkDone = true;
-                        cpu.executeCycle();
-                    }
-
-                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
-                        auto proc = m_fcfsScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
-                    }
+                    m_fcfsScheduler.addProcess(newProc);
+                } else if (m_schedulerType == "rr") {
+                    m_rrScheduler.addProcess(newProc);
                 }
-                else if (m_schedulerType == "rr") {
-                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
-                        auto proc = m_rrScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
-                        cpu.resetCyclesExecuted();
-                    }
+            }
 
-                    if (!cpu.isIdle()) {
-                        activeWorkDone = true;
-                        cpu.executeCycle();
-                    }
+            // Sleep handler
+            for (auto it = m_waitingProcesses.begin(); it != m_waitingProcesses.end(); ) {
+                auto proc = *it;
+                proc->decrementSleepTicks(); 
 
+                if (proc->getState() == ProcessState::READY) {
+                    if (m_schedulerType == "fcfs") m_fcfsScheduler.addProcess(proc);
+                    else if (m_schedulerType == "rr") m_rrScheduler.addProcess(proc);
+                    
+                    it = m_waitingProcesses.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // Process cycle execution
+            for (auto& cpu : m_cpuCores) {
+                if (!cpu.isIdle()) {
                     auto process = cpu.getCurrentProcess();
+                    
+                    cpu.executeCycle();
+                    activeWorkDone = true;
 
-                    // Handle Quantum Expiry Preemption Safely
-                    if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
+                    if (process && process->getState() == ProcessState::WAITING) {
+                        m_waitingProcesses.push_back(process);
+                        cpu.assignProcess(nullptr); // Free core immediately to hit 0% utilization if empty
+                        cpu.resetCyclesExecuted();
+                        continue;
+                    }
+
+                    // Handle natural finish
+                    if (process && process->isFinished()) {
+                        cpu.assignProcess(nullptr);
+                        cpu.resetCyclesExecuted();
+                        continue;
+                    }
+
+                    // Handle Round Robin Quantum preemption
+                    if (m_schedulerType == "rr" && process && 
+                        cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
                         if (!process->isFinished()) {
-                            // Flip state back to READY before re-queuing
                             process->setState(ProcessState::READY);
                             m_rrScheduler.addProcess(process);
                         }
                         cpu.assignProcess(nullptr);
                         cpu.resetCyclesExecuted();
                     }
+                }
 
-                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
-                        auto proc = m_rrScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
+                // Dispatch next ready process to idle cores
+                if (cpu.isIdle()) {
+                    std::shared_ptr<Process> nextProc = nullptr;
+                    if (m_schedulerType == "fcfs" && m_fcfsScheduler.hasProcess()) {
+                        nextProc = m_fcfsScheduler.getNextProcess();
+                    } else if (m_schedulerType == "rr" && m_rrScheduler.hasProcess()) {
+                        nextProc = m_rrScheduler.getNextProcess();
+                    }
+
+                    if (nextProc) {
+                        nextProc->setState(ProcessState::RUNNING);
+                        cpu.assignProcess(nextProc);
                         cpu.resetCyclesExecuted();
+                        activeWorkDone = true;
                     }
                 }
             }
         }
 
-        // If the system has 0 delay and nothing is runnable, yield CPU slice 
-        // to let dashboard rendering commands print cleanly without thread choking
+        // 6. THROTTLE CONTROL SLICE
         if (m_delayPerExec == 0) {
             if (!activeWorkDone) {
                 std::this_thread::yield();
             }
-        }
-        else {
+        } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(m_delayPerExec));
         }
     }

@@ -40,4 +40,5 @@ public:
     void decrementSleep() { if (m_remainingSleepTicks > 0) m_remainingSleepTicks--; }
     unsigned int getRemainingSleep() const { return m_remainingSleepTicks; }
     void setSleepTicks(unsigned int ticks) { m_remainingSleepTicks = ticks; }
+    void decrementSleepTicks();
 };
