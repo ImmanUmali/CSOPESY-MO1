@@ -137,11 +137,6 @@ public:
                 return;
             }
 
-            if (existingProc->isFinished()) {
-                std::cout << "Error: Process '" << processName << "' has already finished execution. Cannot re-attach.\n" << std::endl;
-                return;
-            }
-
             shell.setAttachedProcess(processName);
             shell.changeView(TerminalView::SCREEN_MULTIPLEXER);
 
