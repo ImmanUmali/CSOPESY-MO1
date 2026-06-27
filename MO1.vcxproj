@@ -141,18 +141,27 @@
   <ItemGroup>
     <ClCompile Include="ConfigLoader.cpp" />
     <ClCompile Include="ConsoleShell.cpp" />
+    <ClCompile Include="CPUCore.cpp" />
+    <ClCompile Include="FCFS.cpp" />
     <ClCompile Include="MO1.cpp" />
     <ClCompile Include="Process.cpp" />
+    <ClCompile Include="RR.cpp" />
+    <ClCompile Include="Scheduler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConfigLoader.h" />
     <ClInclude Include="ConfigStructure.h" />
     <ClInclude Include="ConsoleShell.h" />
     <ClInclude Include="CoreCommands.h" />
+    <ClInclude Include="CPUCore.h" />
+    <ClInclude Include="FCFS.h" />
     <ClInclude Include="ICommand.h" />
     <ClInclude Include="Instruction.h" />
+    <ClInclude Include="ISystemContext.h" />
     <ClInclude Include="MultiplexerCommands.h" />
     <ClInclude Include="Process.h" />
+    <ClInclude Include="RR.h" />
+    <ClInclude Include="Scheduler.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="config.txt" />
