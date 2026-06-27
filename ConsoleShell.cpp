@@ -14,6 +14,24 @@ ConsoleShell::ConsoleShell()
     setupCommands();
 }
 
+void ConsoleShell::printMainMenu() const {
+    std::cout << "  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$  /$$$$$$  /$$     /$$\n";
+    std::cout << " /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/ /$$__  $$|  $$   /$$/\n";
+    std::cout << "| $$  \\__/| $$  \\__/| $$  \\ $$| $$  \\ $$| $$      | $$  \\__/ \\  $$ /$$/ \n";
+    std::cout << "| $$      |  $$$$$$ | $$  | $$| $$$$$$$/| $$$$$   |  $$$$$$   \\  $$$$/  \n";
+    std::cout << "| $$       \\____  $$| $$  | $$| $$____/ | $$__/    \\____  $$   \\  $$/   \n";
+    std::cout << "| $$    $$ /$$  \\ $$| $$  | $$| $$      | $$       /$$  \\ $$    | $$    \n";
+    std::cout << "|  $$$$$$/|  $$$$$$/|  $$$$$$/| $$      | $$$$$$$$|  $$$$$$/    | $$    \n";
+    std::cout << " \\______/  \\______/  \\______/ |__/      |________/ \\______/     |__/    \n";
+                                                                        
+                                                                        
+                                                                        
+    std::cout << "Welcome to CSOPESY Emulator!\n";
+    std::cout << "Developers:\n     Lazaro, Heisel Janine C. \n     Tria, Chynna Mae Z. \n     Umali, Immanuel Z. \n";
+    std::cout << "Last updated: 06-27-2026\n";
+    std::cout << "___________________________________________\n\n";
+}
+
 void ConsoleShell::registerCommand(CommandPtr command) {
     if (command) {
         m_commandRegistry[command->getName()] = std::move(command);
@@ -28,7 +46,6 @@ void ConsoleShell::setupCommands() {
     registerCommand(std::make_unique<SchedulerStartCommand>());
     registerCommand(std::make_unique<SchedulerStopCommand>());
     registerCommand(std::make_unique<ReportUtilCommand>());
-
 }
 
 Process* ConsoleShell::findProcess(const std::string& name) {
@@ -81,26 +98,10 @@ std::string ConsoleShell::getAttachedProcess() const {
 }
 
 void ConsoleShell::run() {
-    std::cout << "  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$  /$$$$$$  /$$     /$$\n";
-    std::cout << " /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/ /$$__  $$|  $$   /$$/\n";
-    std::cout << "| $$  \\__/| $$  \\__/| $$  \\ $$| $$  \\ $$| $$      | $$  \\__/ \\  $$ /$$/ \n";
-    std::cout << "| $$      |  $$$$$$ | $$  | $$| $$$$$$$/| $$$$$   |  $$$$$$   \\  $$$$/  \n";
-    std::cout << "| $$       \\____  $$| $$  | $$| $$____/ | $$__/    \\____  $$   \\  $$/   \n";
-    std::cout << "| $$    $$ /$$  \\ $$| $$  | $$| $$      | $$       /$$  \\ $$    | $$    \n";
-    std::cout << "|  $$$$$$/|  $$$$$$/|  $$$$$$/| $$      | $$$$$$$$|  $$$$$$/    | $$    \n";
-    std::cout << " \\______/  \\______/  \\______/ |__/      |________/ \\______/     |__/    \n";
-                                                                        
-                                                                        
-                                                                        
-    std::cout << "Welcome to CSOPESY Emulator!\n";
-    std::cout << "Developers:\n     Lazaro, Heisel Janine C. \n     Tria, Chynna Mae Z. \n     Umali, Immanuel Z. \n";
-    std::cout << "Last updated: 06-21-2026\n";
-    std::cout << "___________________________________________\n\n";
-
+    printMainMenu();
 
     std::string rawInputLine;
 
-   
     while (!shouldExit()) {
         // Adjust the console interface prompt dynamically based on view state
         if (m_currentView == TerminalView::MAIN_MENU) {
@@ -123,7 +124,10 @@ void ConsoleShell::run() {
         if (m_currentView == TerminalView::SCREEN_MULTIPLEXER) {
             if (commandToken == "exit") {
                 // Intercept 'exit' inside process sub-screens to return to main menu
-                std::cout << "Exiting process screen view and returning to main menu.\n" << std::endl;
+                ClearTerminal();
+                printMainMenu();
+
+                std::cout << "Welcome back to the main menu.\n" << std::endl;
                 m_currentView = TerminalView::MAIN_MENU;
                 m_attachedProcessName = "";
                 continue;
