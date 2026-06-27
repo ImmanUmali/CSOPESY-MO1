@@ -33,7 +33,6 @@ public:
             return;
         }
 
-        // Apply configuration states to system context environment
         context.setConfig(parsedConfig);
         context.setInitialized(true);
 

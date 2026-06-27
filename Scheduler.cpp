@@ -52,7 +52,7 @@ void Scheduler::threadLoop() {
     while (m_running) {
         m_cpuCycles++;
 
-        // MILESTONE 5: AUTOMATED BACKGROUND GENERATION
+        // Automated background generation
         if (m_generationEnabled.load()) {
             // Check if generation interval parameter is hit matching frequency ticks
             if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
@@ -74,34 +74,34 @@ void Scheduler::threadLoop() {
             }
         }
 
-        // CORE CPU EXECUTION PIPELINE
+        // Core CPU Execution
         for (auto& cpu : m_cpuCores) {
             if (m_schedulerType == "fcfs") {
-                // 1. If it's idle, assign a process
+                // If it's idle, assign a process
                 if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
                     cpu.assignProcess(m_fcfsScheduler.getNextProcess());
                 }
                 
-                // 2. Execute the cycle
+                // Execute the cycle
                 cpu.executeCycle();
                 
-                // 3. IMMEDIATELY backfill if it became idle so it's ready for the next tick
+                // Backfill if it became idle or got preempted
                 if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
                     cpu.assignProcess(m_fcfsScheduler.getNextProcess());
                 }
             }
             else if (m_schedulerType == "rr") {
-                // 1. If it's idle, assign a process
+                // If it's idle, assign a process
                 if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
                     cpu.assignProcess(m_rrScheduler.getNextProcess());
                     cpu.resetCyclesExecuted();
                 }
 
-                // 2. Execute the cycle
+                // Execute the cycle
                 cpu.executeCycle();
                 auto process = cpu.getCurrentProcess();
 
-                // 3. Handle Quantum Expiry Preemption
+                // Handle Quantum Expiry Preemption
                 if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
                     if (!process->isFinished()) {
                         m_rrScheduler.addProcess(process);
@@ -110,7 +110,7 @@ void Scheduler::threadLoop() {
                     cpu.resetCyclesExecuted();
                 }
                 
-                // 4. IMMEDIATELY backfill if it became idle or got preempted
+                // Backfill if it became idle or got preempted
                 if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
                     cpu.assignProcess(m_rrScheduler.getNextProcess());
                     cpu.resetCyclesExecuted();

@@ -49,14 +49,12 @@ void ConsoleShell::setupCommands() {
 }
 
 Process* ConsoleShell::findProcess(const std::string& name) {
-    // 1. Check local manual process tracker first
     for (auto& proc : m_processList) {
         if (proc->getName() == name) {
             return proc.get();
         }
     }
 
-    // 2. If not found, check the scheduler's universal thread-safe tracker
     if (m_scheduler) {
         auto tracked = m_scheduler->getAllTrackedProcesses();
         for (auto& proc : tracked) {
@@ -74,7 +72,6 @@ std::vector<std::string> ConsoleShell::tokenizeInput(const std::string& rawInput
     std::stringstream ss(rawInput);
     std::string token;
 
-    // Split input line by blank spaces
     while (ss >> token) {
         tokens.push_back(token);
     }
@@ -123,7 +120,7 @@ void ConsoleShell::run() {
         // View Context Rules Engine Intervention
         if (m_currentView == TerminalView::SCREEN_MULTIPLEXER) {
             if (commandToken == "exit") {
-                // Intercept 'exit' inside process sub-screens to return to main menu
+                
                 ClearTerminal();
                 printMainMenu();
 
