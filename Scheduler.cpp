@@ -72,6 +72,7 @@ void Scheduler::threadLoop() {
                 }
                 else {
                     ++it;
+
                 }
             }
         }
@@ -98,7 +99,6 @@ void Scheduler::threadLoop() {
             }
         }
 
-        // CORE CPU EXECUTION PIPELINE
         for (auto& cpu : m_cpuCores) {
             if (m_schedulerType == "fcfs") {
                 if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {

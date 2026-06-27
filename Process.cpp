@@ -95,7 +95,7 @@ void Process::addLog(const std::string& message) {
 void Process::evaluateInstruction(const Instruction& ins, int coreId) {
     switch (ins.op) {
     case OpCode::PRINT: {
-        // ONLY PRINT operations generate visible screen history rows
+        // Only print operations generate visible screen history rows
         std::stringstream formattedLog;
         formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
             << "\"Hello world from " << m_name << "!\"";

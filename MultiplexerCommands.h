@@ -16,9 +16,7 @@ void ClearTerminal() {
 #endif
 }
 
-// Milestone 6
-
-// Helper structure to print exactly the dashboard to any output stream
+// Helper structure to print log
 inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
     auto sched = shell.getScheduler();
     if (!sched) return;
@@ -35,17 +33,18 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
     double utilization = (totalCores > 0) ? ((double)coresUsed / totalCores) * 100.0 : 0.0;
 
     out << "---------------------------------------------------------\n";
-    out << "CSOPESY Emulator Dashboard Context State Log\n";
+    out << "CSOPESY Emulator Log\n";
     out << "---------------------------------------------------------\n";
     out << "CPU utilization: " << std::fixed << std::setprecision(0) << utilization << "%\n";
     out << "Cores used: " << coresUsed << "\n";
     out << "Cores available: " << (totalCores - coresUsed) << "\n";
     out << "---------------------------------------------------------\n\n";
 
+    // Display process status if running
     out << "Running processes:\n";
     for (const auto& proc : trackingList) {
         if (!proc->isFinished()) {
-            std::string coreDisplay = "Core: N/A"; // Fallback if a process is READY but not assigned to a core yet
+            std::string coreDisplay = "Core: N/A"; // If a process is READY but not assigned to a core yet
             for (const auto& core : cores) {
                 if (!core.isIdle() && core.getCurrentProcess() && core.getCurrentProcess()->getPid() == proc->getPid()) {
                     coreDisplay = "Core # " + std::to_string(core.getId());
@@ -53,7 +52,7 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
                 }
             }
 
-            // Display: process_name (timestamp) Core # X / Total_Lines
+
             out << std::left << std::setw(12) << proc->getName()
                 << " (" << proc->getTimestamp() << ")    "
                 << std::left << std::setw(12) << coreDisplay
@@ -61,6 +60,7 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
         }
     }
 
+    // Display process status if finished
     out << "\nFinished processes:\n";
     for (const auto& proc : trackingList) {
         if (proc->isFinished()) {
@@ -78,7 +78,6 @@ public:
     bool isBypassingInitialization() const override { return false; }
 
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
-        // 1. Guard against no flags passed
         if (args.empty()) {
             std::cout << "Usage: screen -s <process_name> | screen -r <process_name> | screen -ls\n" << std::endl;
             return;
@@ -87,13 +86,13 @@ public:
         std::string flag = args[0];
         ConsoleShell& shell = static_cast<ConsoleShell&>(context);
 
-        // 2. Handle 'screen -ls' (Only requires 1 argument)
+        // If input is screen -ls
         if (flag == "-ls") {
             GenerateReportStream(std::cout, shell);
             return;
         }
 
-        // 3. Guard for -s and -r which require a process name (2 arguments)
+        // 3. Guard for -s and -r which require a process name 
         if (args.size() < 2) {
             std::cout << "Usage: screen " << flag << " <process_name>\n" << std::endl;
             return;
@@ -101,7 +100,7 @@ public:
 
         std::string processName = args[1];
 
-        // 4. Handle 'screen -s' (Create/Spawn and attach)
+       // If input is screen -s
         if (flag == "-s") {
             if (shell.findProcess(processName) != nullptr) {
                 std::cout << "Error: Process with name '" << processName << "' already exists.\n" << std::endl;
@@ -111,11 +110,8 @@ public:
             SystemConfig cfg = shell.getConfig();
             int newPid = shell.generateNextPid();
             
-            // 1. Create the process as a shared_ptr so both ConsoleShell and Scheduler can track it
             auto newProc = std::make_shared<Process>(newPid, processName, cfg.minIns, cfg.maxIns);
 
-            // 2. Register it to your ConsoleShell's internal history tracker
-            // (Note: If your addProcess takes unique_ptr, see the adjustment step below)
             shell.addProcess(newProc); 
             
             shell.setAttachedProcess(processName);
@@ -123,7 +119,7 @@ public:
 
             ClearTerminal();
 
-            // 3. SEND IT TO THE SCHEDULER LAYER SO CORES CAN ACTUALLY EXECUTE IT!
+
             auto sched = shell.getScheduler();
             if (sched) {
                 sched->addProcess(newProc);
@@ -132,7 +128,7 @@ public:
             std::cout << "Attached to new process screen: " << processName << std::endl;
         }
         
-        // 5. Handle 'screen -r' (Re-attach to existing)
+        // If input is screen -r
         else if (flag == "-r") {
             Process* existingProc = shell.findProcess(processName);
             
@@ -159,7 +155,6 @@ public:
     }
 };
 
-// TODO: Fix implmentation of process-smi later in accordance to the specs
 class ProcessSmiCommand : public ICommand {
 public:
     std::string getName() const override { return "process-smi"; }
@@ -179,11 +174,9 @@ public:
             return;
         }
 
-        // --- Specs Compliant Output Format with Line Counters ---
         std::cout << "Process name: " << proc->getName() << "\n";
         std::cout << "ID: " << proc->getPid() << "\n";
 
-        
         std::cout << "Logs:\n";
         for (const auto& log : proc->getLogs()) {
             std::cout << log << "\n";
@@ -194,7 +187,6 @@ public:
         std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
 
 
-        // Clean line break before optional state messages
         std::cout << "\n";
 
         if (proc->isFinished()) {
@@ -202,7 +194,7 @@ public:
         }
     }
 };
-// Milestone 5
+
 
 class SchedulerStartCommand : public ICommand {
 public:
@@ -219,7 +211,6 @@ public:
         }
 
         SystemConfig cfg = shell.getConfig();
-        // Seed parameters dynamically from Milestone 2 Configuration Loader structure
         sched->setGenerationParameters(cfg.batchProcessFreq, cfg.minIns, cfg.maxIns, shell.generateNextPid() - 1);
         sched->startGeneration();
         
@@ -251,7 +242,6 @@ public:
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
         ConsoleShell& shell = static_cast<ConsoleShell&>(context);
         
-        // Intercepting 'screen -ls' variants directly
         if (!args.empty() && args[0] == "-ls") {
             GenerateReportStream(std::cout, shell);
             return;
