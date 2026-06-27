@@ -52,107 +52,110 @@ void Scheduler::threadLoop() {
     while (m_running) {
         m_cpuCycles++;
 
-        {
-            std::lock_guard<std::mutex> lock(m_schedulerMutex);
-            // STEP A: Process waiting tasks and decrement sleep durations
-            for (auto it = m_waitingProcesses.begin(); it != m_waitingProcesses.end(); ) {
-                (*it)->decrementSleep();
-
-                if ((*it)->getRemainingSleep() == 0) {
-                    (*it)->setState(ProcessState::READY);
-
-                    // Re-queue the process back into its active scheduling algorithm
-                    if (m_schedulerType == "fcfs") {
-                        m_fcfsScheduler.addProcess(*it);
-                    }
-                    else if (m_schedulerType == "rr") {
-                        m_rrScheduler.addProcess(*it);
-                    }
-                    it = m_waitingProcesses.erase(it); // Remove from waiting list
-                }
-                else {
-                    ++it;
-
-                }
-            }
-        }
-
         // MILESTONE 5: AUTOMATED BACKGROUND GENERATION
         if (m_generationEnabled.load()) {
-            // Check if generation interval parameter is hit matching frequency ticks
             if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
                 int pid = ++m_generatedPidCounter;
                 std::string processName = "p" + std::to_string(pid);
-                
+
                 auto batchProc = std::make_shared<Process>(pid, processName, m_minIns, m_maxIns);
-                
+
+                // Keep the state explicit
+                batchProc->setState(ProcessState::READY);
+
                 {
                     std::lock_guard<std::mutex> lock(m_schedulerMutex);
                     m_allTrackedProcesses.push_back(batchProc);
-                }
 
-                if (m_schedulerType == "fcfs") {
-                    m_fcfsScheduler.addProcess(batchProc);
-                } else if (m_schedulerType == "rr") {
-                    m_rrScheduler.addProcess(batchProc);
-                }
-            }
-        }
-
-        for (auto& cpu : m_cpuCores) {
-            if (m_schedulerType == "fcfs") {
-                if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
-                    cpu.assignProcess(m_fcfsScheduler.getNextProcess());
-                }
-
-                cpu.executeCycle();
-                auto process = cpu.getCurrentProcess();
-
-                // STEP B: Handle a process that went to sleep during its cycle execution
-                if (process && process->getState() == ProcessState::WAITING) {
-                    std::lock_guard<std::mutex> lock(m_schedulerMutex);
-                    m_waitingProcesses.push_back(process);
-                    cpu.assignProcess(nullptr); // Evict from CPU core
-                }
-
-                if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
-                    cpu.assignProcess(m_fcfsScheduler.getNextProcess());
-                }
-            }
-            else if (m_schedulerType == "rr") {
-                if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
-                    cpu.assignProcess(m_rrScheduler.getNextProcess());
-                    cpu.resetCyclesExecuted();
-                }
-
-                cpu.executeCycle();
-                auto process = cpu.getCurrentProcess();
-
-                // STEP C: Handle a process that went to sleep under Round Robin
-                if (process && process->getState() == ProcessState::WAITING) {
-                    std::lock_guard<std::mutex> lock(m_schedulerMutex);
-                    m_waitingProcesses.push_back(process);
-                    cpu.assignProcess(nullptr); // Evict from CPU core
-                    cpu.resetCyclesExecuted();
-                    process = nullptr;
-                }
-
-                // Handle Quantum Expiry Preemption
-                if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
-                    if (!process->isFinished()) {
-                        m_rrScheduler.addProcess(process);
+                    if (m_schedulerType == "fcfs") {
+                        m_fcfsScheduler.addProcess(batchProc);
                     }
-                    cpu.assignProcess(nullptr);
-                    cpu.resetCyclesExecuted();
-                }
-
-                if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
-                    cpu.assignProcess(m_rrScheduler.getNextProcess());
-                    cpu.resetCyclesExecuted();
+                    else if (m_schedulerType == "rr") {
+                        m_rrScheduler.addProcess(batchProc);
+                    }
                 }
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_delayPerExec));
+        // Variable tracking if work was actually managed this cycle
+        bool activeWorkDone = false;
+
+        // SCOPE LOCK FOR CORE PIPELINE OPERATIONS
+        {
+            std::lock_guard<std::mutex> lock(m_schedulerMutex);
+
+            for (auto& cpu : m_cpuCores) {
+                if (m_schedulerType == "fcfs") {
+                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
+                        auto proc = m_fcfsScheduler.getNextProcess();
+                        if (proc) {
+                            proc->setState(ProcessState::RUNNING);
+                            cpu.assignProcess(proc);
+                        }
+                    }
+
+                    if (!cpu.isIdle()) {
+                        activeWorkDone = true;
+                        cpu.executeCycle();
+                    }
+
+                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
+                        auto proc = m_fcfsScheduler.getNextProcess();
+                        if (proc) {
+                            proc->setState(ProcessState::RUNNING);
+                            cpu.assignProcess(proc);
+                        }
+                    }
+                }
+                else if (m_schedulerType == "rr") {
+                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
+                        auto proc = m_rrScheduler.getNextProcess();
+                        if (proc) {
+                            proc->setState(ProcessState::RUNNING);
+                            cpu.assignProcess(proc);
+                        }
+                        cpu.resetCyclesExecuted();
+                    }
+
+                    if (!cpu.isIdle()) {
+                        activeWorkDone = true;
+                        cpu.executeCycle();
+                    }
+
+                    auto process = cpu.getCurrentProcess();
+
+                    // Handle Quantum Expiry Preemption Safely
+                    if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
+                        if (!process->isFinished()) {
+                            // FIX: Flip state back to READY before re-queuing
+                            process->setState(ProcessState::READY);
+                            m_rrScheduler.addProcess(process);
+                        }
+                        cpu.assignProcess(nullptr);
+                        cpu.resetCyclesExecuted();
+                    }
+
+                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
+                        auto proc = m_rrScheduler.getNextProcess();
+                        if (proc) {
+                            proc->setState(ProcessState::RUNNING);
+                            cpu.assignProcess(proc);
+                        }
+                        cpu.resetCyclesExecuted();
+                    }
+                }
+            }
+        }
+
+        // If the system has 0 delay and nothing is runnable, yield CPU slice 
+        // to let dashboard rendering commands print cleanly without thread choking
+        if (m_delayPerExec == 0) {
+            if (!activeWorkDone) {
+                std::this_thread::yield();
+            }
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_delayPerExec));
+        }
     }
 }
