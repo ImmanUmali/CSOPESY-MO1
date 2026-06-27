@@ -52,49 +52,67 @@ void Scheduler::threadLoop() {
     while (m_running) {
         m_cpuCycles++;
 
-        // --- MILESTONE 5: AUTOMATED BACKGROUND GENERATION ---
-        if (m_generationEnabled && (m_cpuCycles % m_batchProcessFreq == 0)) {
-            int nextPid = ++m_generatedPidCounter;
-            
-            // Generate padded clean formatting string e.g. p01, p02...
-            std::string procName = std::string("p") + (nextPid < 10 ? "0" : "") + std::to_string(nextPid);
-            
-            auto batchProc = std::make_shared<Process>(nextPid, procName, m_minIns, m_maxIns);
-            
-            // Use internal call bypassing lock duplication
-            m_allTrackedProcesses.push_back(batchProc);
-            if (m_schedulerType == "fcfs") {
-                m_fcfsScheduler.addProcess(batchProc);
-            } else if (m_schedulerType == "rr") {
-                m_rrScheduler.addProcess(batchProc);
+        // MILESTONE 5: AUTOMATED BACKGROUND GENERATION
+        if (m_generationEnabled.load()) {
+            // Check if generation interval parameter is hit matching frequency ticks
+            if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
+                int pid = ++m_generatedPidCounter;
+                std::string processName = "p" + std::to_string(pid);
+                
+                auto batchProc = std::make_shared<Process>(pid, processName, m_minIns, m_maxIns);
+                
+                {
+                    std::lock_guard<std::mutex> lock(m_schedulerMutex);
+                    m_allTrackedProcesses.push_back(batchProc);
+                }
+
+                if (m_schedulerType == "fcfs") {
+                    m_fcfsScheduler.addProcess(batchProc);
+                } else if (m_schedulerType == "rr") {
+                    m_rrScheduler.addProcess(batchProc);
+                }
             }
         }
 
-        // --- CORE CPU EXECUTION PIPELINE (Unmodified from your team's code) ---
+        // CORE CPU EXECUTION PIPELINE
         for (auto& cpu : m_cpuCores) {
             if (m_schedulerType == "fcfs") {
+                // 1. If it's idle, assign a process
                 if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
                     cpu.assignProcess(m_fcfsScheduler.getNextProcess());
                 }
+                
+                // 2. Execute the cycle
                 cpu.executeCycle();
+                
+                // 3. IMMEDIATELY backfill if it became idle so it's ready for the next tick
+                if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
+                    cpu.assignProcess(m_fcfsScheduler.getNextProcess());
+                }
             }
             else if (m_schedulerType == "rr") {
+                // 1. If it's idle, assign a process
                 if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
                     cpu.assignProcess(m_rrScheduler.getNextProcess());
                     cpu.resetCyclesExecuted();
                 }
 
+                // 2. Execute the cycle
                 cpu.executeCycle();
                 auto process = cpu.getCurrentProcess();
 
-                if (!process)
-                    continue;
-
-                if (cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
+                // 3. Handle Quantum Expiry Preemption
+                if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
                     if (!process->isFinished()) {
                         m_rrScheduler.addProcess(process);
                     }
                     cpu.assignProcess(nullptr);
+                    cpu.resetCyclesExecuted();
+                }
+                
+                // 4. IMMEDIATELY backfill if it became idle or got preempted
+                if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
+                    cpu.assignProcess(m_rrScheduler.getNextProcess());
                     cpu.resetCyclesExecuted();
                 }
             }

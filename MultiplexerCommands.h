@@ -37,10 +37,19 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
     out << "Running processes:\n";
     for (const auto& proc : trackingList) {
         if (!proc->isFinished()) {
-            // Display: process_name (timestamp) Core: ID Current_Line / Total_Lines
+            std::string coreDisplay = "Core: N/A"; // Fallback if a process is READY but not assigned to a core yet
+            for (const auto& core : cores) {
+                if (!core.isIdle() && core.getCurrentProcess() && core.getCurrentProcess()->getPid() == proc->getPid()) {
+                    coreDisplay = "Core # " + std::to_string(core.getId());
+                    break;
+                }
+            }
+
+            // Display: process_name (timestamp) Core # X / Total_Lines
             out << std::left << std::setw(12) << proc->getName()
                 << " (" << proc->getTimestamp() << ")    "
-                << "Progress: " << proc->getCommandCounter() << " / " << proc->getLinesOfCode() << "\n";
+                << coreDisplay << " " 
+                << proc->getCommandCounter() << " / " << proc->getLinesOfCode() << "\n";
         }
     }
 
