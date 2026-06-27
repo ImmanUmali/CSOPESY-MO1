@@ -134,8 +134,15 @@ public:
         
         // 5. Handle 'screen -r' (Re-attach to existing)
         else if (flag == "-r") {
-            if (shell.findProcess(processName) == nullptr) {
+            Process* existingProc = shell.findProcess(processName);
+            
+            if (existingProc == nullptr) {
                 std::cout << "Error: Process '" << processName << "' not found.\n" << std::endl;
+                return;
+            }
+
+            if (existingProc->isFinished()) {
+                std::cout << "Error: Process '" << processName << "' has already finished execution. Cannot re-attach.\n" << std::endl;
                 return;
             }
 
@@ -176,15 +183,14 @@ public:
         std::cout << "Process name: " << proc->getName() << "\n";
         std::cout << "ID: " << proc->getPid() << "\n";
 
-        
+        // Added instruction counters right below the ID:
+        std::cout << "Current Line: " << proc->getCommandCounter() << "\n";
+        std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
+
         std::cout << "Logs:\n";
         for (const auto& log : proc->getLogs()) {
             std::cout << log << "\n";
         }
-        std::cout << '\n';
-        // Added instruction counters right below the ID:
-        std::cout << "Current Line: " << proc->getCommandCounter() << "\n";
-        std::cout << "Total Lines: " << proc->getLinesOfCode() << "\n";
 
         // Clean line break before optional state messages
         std::cout << "\n";
