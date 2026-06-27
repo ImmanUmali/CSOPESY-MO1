@@ -5,6 +5,8 @@
 #include "ConfigLoader.h"
 #include <iostream>
 
+
+
 class ExitCommand : public ICommand {
 public:
     std::string getName() const override { return "exit"; }

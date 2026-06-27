@@ -8,7 +8,8 @@
 enum class ProcessState { READY, RUNNING, WAITING, FINISHED };
 
 class Process {
-private:
+public:
+    int x;
     int m_pid;
     std::string m_name;
     ProcessState m_state;

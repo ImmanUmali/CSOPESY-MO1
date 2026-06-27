@@ -45,15 +45,25 @@ Instruction generateRandomInstruction(int currentDepth) {
     }
 
     if (ins.op == OpCode::FOR) {
+
         std::uniform_int_distribution<uint32_t> loopDist(2, 5);
+
         ins.repeatCount = loopDist(gen);
 
+
+
         std::uniform_int_distribution<size_t> childLinesDist(1, 3);
+
         size_t linesInBlock = childLinesDist(gen);
 
+
+
         for (size_t i = 0; i < linesInBlock; ++i) {
+
             ins.childInstructions.push_back(generateRandomInstruction(currentDepth + 1));
+
         }
+
     }
     else {
         ins.repeatCount = 0;
@@ -64,17 +74,29 @@ Instruction generateRandomInstruction(int currentDepth) {
 
 Process::Process(int pid, const std::string& name, uint32_t minIns, uint32_t maxIns)
     : m_pid(pid), m_name(name), m_state(ProcessState::READY), m_commandCounter(0) {
-
+    this->x = 0;
     m_timestamp = getCurrentTimestampString();
 
     std::uniform_int_distribution<size_t> dist(minIns, maxIns);
     m_linesOfCode = dist(gen);
 
+    m_symbolTable["x"] = 0;
+
+    std::uniform_int_distribution<int> addDist(1, 10); // Randomizer for 1 to 10
+
     for (size_t i = 0; i < m_linesOfCode; ++i) {
-        m_instructions.push_back(generateRandomInstruction(1));
+        Instruction ins;
+        if (i % 2 == 0) {
+            ins.op = OpCode::PRINT;
+        }
+        else {
+            ins.op = OpCode::ADD;
+            ins.args = { "x", std::to_string(addDist(gen)) };
+        }
+        ins.repeatCount = 0; 
+        m_instructions.push_back(ins);
     }
 
-    // Default configuration specification baseline log matching exact spacing requirement
     std::stringstream formattedLog;
     formattedLog << "(" << m_timestamp << ") Core:0 \"Hello world from " << m_name << "!\"";
     m_logs.push_back(formattedLog.str());
@@ -95,36 +117,31 @@ void Process::addLog(const std::string& message) {
 void Process::evaluateInstruction(const Instruction& ins, int coreId) {
     switch (ins.op) {
     case OpCode::PRINT: {
-        // Only print operations generate visible screen history rows
         std::stringstream formattedLog;
         formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
-            << "\"Hello world from " << m_name << "!\"";
+            << "\"Value of x: " << m_symbolTable["x"] << "\"";
         addLog(formattedLog.str());
         break;
     }
     case OpCode::DECLARE: {
-        // Silently processes backend state tracking without logging
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int initialVal = ins.args.size() < 2 ? 0 : std::stoi(ins.args[1]);
         m_symbolTable[varName] = initialVal;
         break;
     }
     case OpCode::ADD: {
-        // Silently processes backend state tracking without logging
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
         m_symbolTable[varName] += val;
         break;
     }
     case OpCode::SUBTRACT: {
-        // Silently processes backend state tracking without logging
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
         m_symbolTable[varName] -= val;
         break;
     }
     case OpCode::SLEEP: {
-        // Read arguments or default to a randomized sleep tick constraint (e.g., 5 to 15 ticks)
         unsigned int ticksToSleep = ins.args.empty() ? 10 : std::stoul(ins.args[0]);
 
         m_state = ProcessState::WAITING;
@@ -134,7 +151,6 @@ void Process::evaluateInstruction(const Instruction& ins, int coreId) {
         break;
     }
     case OpCode::FOR: {
-        // A loop container doesn't log a message itself; it recursively executes its children
         for (uint32_t r = 0; r < ins.repeatCount; ++r) {
             for (const auto& child : ins.childInstructions) {
                 evaluateInstruction(child, coreId);

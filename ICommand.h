@@ -17,3 +17,4 @@ public:
 };
 
 using CommandPtr = std::unique_ptr<ICommand>;
+
