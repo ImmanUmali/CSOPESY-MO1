@@ -52,7 +52,7 @@ void Scheduler::threadLoop() {
     while (m_running) {
         m_cpuCycles++;
 
-        // MILESTONE 5: AUTOMATED BACKGROUND GENERATION
+        // Automated Process Generation
         if (m_generationEnabled.load()) {
             if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
                 int pid = ++m_generatedPidCounter;
@@ -80,7 +80,7 @@ void Scheduler::threadLoop() {
         // Variable tracking if work was actually managed this cycle
         bool activeWorkDone = false;
 
-        // SCOPE LOCK FOR CORE PIPELINE OPERATIONS
+        // Scope lock for core pipeline operations
         {
             std::lock_guard<std::mutex> lock(m_schedulerMutex);
 
@@ -127,7 +127,7 @@ void Scheduler::threadLoop() {
                     // Handle Quantum Expiry Preemption Safely
                     if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
                         if (!process->isFinished()) {
-                            // FIX: Flip state back to READY before re-queuing
+                            // Flip state back to READY before re-queuing
                             process->setState(ProcessState::READY);
                             m_rrScheduler.addProcess(process);
                         }
