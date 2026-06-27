@@ -8,6 +8,14 @@
 
 class ConsoleShell;
 
+void ClearTerminal() {
+#if defined(_WIN32) || defined(_WIN64)
+    std::system("cls");
+#else
+    std::system("clear");
+#endif
+}
+
 // Milestone 6
 
 // Helper structure to print exactly the dashboard to any output stream
@@ -72,7 +80,7 @@ public:
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
         // 1. Guard against no flags passed
         if (args.empty()) {
-            std::cout << "Usage: screen -s <name> | screen -r <name> | screen -ls\n" << std::endl;
+            std::cout << "Usage: screen -s <process_name> | screen -r <process_name> | screen -ls\n" << std::endl;
             return;
         }
 
@@ -113,6 +121,8 @@ public:
             shell.setAttachedProcess(processName);
             shell.changeView(TerminalView::SCREEN_MULTIPLEXER);
 
+            ClearTerminal();
+
             // 3. SEND IT TO THE SCHEDULER LAYER SO CORES CAN ACTUALLY EXECUTE IT!
             auto sched = shell.getScheduler();
             if (sched) {
@@ -131,6 +141,9 @@ public:
 
             shell.setAttachedProcess(processName);
             shell.changeView(TerminalView::SCREEN_MULTIPLEXER);
+
+            ClearTerminal();
+
             std::cout << "Re-attached to process screen: " << processName << std::endl;
         }
         else {
@@ -257,6 +270,6 @@ public:
         GenerateReportStream(logFile, shell);
         logFile.close();
 
-        std::cout << "Report successfully snapshot/generated at csopesy-log.txt!\n" << std::endl;
+        std::cout << "Report generated at csopesy-log.txt!\n" << std::endl;
     }
 };

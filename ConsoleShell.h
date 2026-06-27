@@ -36,6 +36,8 @@ public:
     ConsoleShell();
     ~ConsoleShell() override = default;
 
+    void printMainMenu() const;
+
     bool isInitialized() const override { return m_initialized; }
     void setInitialized(bool value) override { m_initialized = value; }
     bool shouldExit() const override { return m_exitFlag; }
