@@ -51,11 +51,11 @@ void Scheduler::addProcess(std::shared_ptr<Process> process) {
 void Scheduler::threadLoop() {
     while (m_running) {
         bool activeWorkDone = false;
-        
-        m_cpuCycles++; 
 
         {
             std::lock_guard<std::mutex> lock(m_schedulerMutex);
+            
+            m_cpuCycles++; 
 
             // Automated Process Generation
             if (m_generationEnabled && (m_cpuCycles % m_batchProcessFreq == 0)) {
@@ -63,17 +63,13 @@ void Scheduler::threadLoop() {
                 std::string procName = "p" + std::to_string(nextPid);
                 
                 auto newProc = std::make_shared<Process>(nextPid, procName, m_minIns, m_maxIns);
-                
                 m_allTrackedProcesses.push_back(newProc);
 
-                if (m_schedulerType == "fcfs") {
-                    m_fcfsScheduler.addProcess(newProc);
-                } else if (m_schedulerType == "rr") {
-                    m_rrScheduler.addProcess(newProc);
-                }
+                if (m_schedulerType == "fcfs") m_fcfsScheduler.addProcess(newProc);
+                else if (m_schedulerType == "rr") m_rrScheduler.addProcess(newProc);
             }
 
-            // Sleep handler
+            // Sleep Handler
             for (auto it = m_waitingProcesses.begin(); it != m_waitingProcesses.end(); ) {
                 auto proc = *it;
                 proc->decrementSleepTicks(); 
@@ -88,7 +84,7 @@ void Scheduler::threadLoop() {
                 }
             }
 
-            // Process cycle execution
+            // Process Execution
             for (auto& cpu : m_cpuCores) {
                 if (!cpu.isIdle()) {
                     auto process = cpu.getCurrentProcess();
@@ -98,12 +94,12 @@ void Scheduler::threadLoop() {
 
                     if (process && process->getState() == ProcessState::WAITING) {
                         m_waitingProcesses.push_back(process);
-                        cpu.assignProcess(nullptr); // Free core immediately to hit 0% utilization if empty
+                        cpu.assignProcess(nullptr); // Free core immediately to allow 0% CPU util metric
                         cpu.resetCyclesExecuted();
                         continue;
                     }
 
-                    // Handle natural finish
+                    // Handle completion
                     if (process && process->isFinished()) {
                         cpu.assignProcess(nullptr);
                         cpu.resetCyclesExecuted();
@@ -122,7 +118,6 @@ void Scheduler::threadLoop() {
                     }
                 }
 
-                // Dispatch next ready process to idle cores
                 if (cpu.isIdle()) {
                     std::shared_ptr<Process> nextProc = nullptr;
                     if (m_schedulerType == "fcfs" && m_fcfsScheduler.hasProcess()) {
@@ -141,11 +136,8 @@ void Scheduler::threadLoop() {
             }
         }
 
-        // 6. THROTTLE CONTROL SLICE
         if (m_delayPerExec == 0) {
-            if (!activeWorkDone) {
-                std::this_thread::yield();
-            }
+            std::this_thread::yield(); 
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(m_delayPerExec));
         }
