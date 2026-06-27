@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
 
 class ConsoleShell;
 
@@ -88,7 +89,13 @@ public:
 
         // If input is screen -ls
         if (flag == "-ls") {
-            GenerateReportStream(std::cout, shell);
+            std::stringstream ss;
+            GenerateReportStream(ss, shell); 
+            
+            std::string reportText = ss.str();
+            shell.setLastSnapshot(reportText); 
+
+            std::cout << reportText; 
             return;
         }
 
@@ -254,13 +261,22 @@ public:
     void execute(ISystemContext& context, const std::vector<std::string>& args) override {
         ConsoleShell& shell = static_cast<ConsoleShell&>(context);
         
+        std::string cachedReport = shell.getLastSnapshot();
+        
+        if (cachedReport.empty()) {
+            std::stringstream ss;
+            GenerateReportStream(ss, shell);
+            cachedReport = ss.str();
+            shell.setLastSnapshot(cachedReport);
+        }
+
         std::ofstream logFile("csopesy-log.txt", std::ios::trunc);
         if (!logFile.is_open()) {
             std::cout << "Error: Unresolved IO access exceptions generating 'csopesy-log.txt'.\n" << std::endl;
             return;
         }
 
-        GenerateReportStream(logFile, shell);
+        logFile << cachedReport;
         logFile.close();
 
         std::cout << "Report generated at csopesy-log.txt!\n" << std::endl;
