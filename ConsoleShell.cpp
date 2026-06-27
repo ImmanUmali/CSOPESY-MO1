@@ -32,11 +32,23 @@ void ConsoleShell::setupCommands() {
 }
 
 Process* ConsoleShell::findProcess(const std::string& name) {
+    // 1. Check local manual process tracker first
     for (auto& proc : m_processList) {
         if (proc->getName() == name) {
             return proc.get();
         }
     }
+
+    // 2. If not found, check the scheduler's universal thread-safe tracker
+    if (m_scheduler) {
+        auto tracked = m_scheduler->getAllTrackedProcesses();
+        for (auto& proc : tracked) {
+            if (proc->getName() == name) {
+                return proc.get();
+            }
+        }
+    }
+    
     return nullptr;
 }
 

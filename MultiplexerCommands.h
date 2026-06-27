@@ -48,7 +48,7 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
             // Display: process_name (timestamp) Core # X / Total_Lines
             out << std::left << std::setw(12) << proc->getName()
                 << " (" << proc->getTimestamp() << ")    "
-                << coreDisplay << " " 
+                << std::left << std::setw(12) << coreDisplay
                 << proc->getCommandCounter() << " / " << proc->getLinesOfCode() << "\n";
         }
     }
