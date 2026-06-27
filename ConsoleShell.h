@@ -31,6 +31,8 @@ private:
     void registerCommand(CommandPtr command);
     void setupCommands();
 
+    std::string m_lastScreenLs;
+
 public:
     ConsoleShell();
     ~ConsoleShell() override = default;
@@ -60,4 +62,7 @@ public:
 
     std::shared_ptr<Scheduler> getScheduler() override { return m_scheduler; }
     void setScheduler(std::shared_ptr<Scheduler> scheduler) override { m_scheduler = scheduler; }
+
+    void setLastSnapshot(const std::string& report) { m_lastScreenLs = report; }
+    std::string getLastSnapshot() const { return m_lastScreenLs; }
 };
