@@ -8,8 +8,28 @@ ConsoleShell::ConsoleShell()
     : m_initialized(false),
     m_exitFlag(false),
     m_currentView(TerminalView::MAIN_MENU),
-    m_attachedProcessName("") {
+    m_attachedProcessName(""),
+    m_pidCounter(0),
+    m_scheduler(nullptr) {
     setupCommands();
+}
+
+void ConsoleShell::printMainMenu() const {
+    std::cout << "  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$  /$$$$$$  /$$     /$$\n";
+    std::cout << " /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/ /$$__  $$|  $$   /$$/\n";
+    std::cout << "| $$  \\__/| $$  \\__/| $$  \\ $$| $$  \\ $$| $$      | $$  \\__/ \\  $$ /$$/ \n";
+    std::cout << "| $$      |  $$$$$$ | $$  | $$| $$$$$$$/| $$$$$   |  $$$$$$   \\  $$$$/  \n";
+    std::cout << "| $$       \\____  $$| $$  | $$| $$____/ | $$__/    \\____  $$   \\  $$/   \n";
+    std::cout << "| $$    $$ /$$  \\ $$| $$  | $$| $$      | $$       /$$  \\ $$    | $$    \n";
+    std::cout << "|  $$$$$$/|  $$$$$$/|  $$$$$$/| $$      | $$$$$$$$|  $$$$$$/    | $$    \n";
+    std::cout << " \\______/  \\______/  \\______/ |__/      |________/ \\______/     |__/    \n";
+                                                                        
+                                                                        
+                                                                        
+    std::cout << "Welcome to CSOPESY Emulator!\n";
+    std::cout << "Developers:\n     Lazaro, Heisel Janine C. \n     Tria, Chynna Mae Z. \n     Umali, Immanuel Z. \n";
+    std::cout << "Last updated: 06-27-2026\n";
+    std::cout << "___________________________________________\n\n";
 }
 
 void ConsoleShell::registerCommand(CommandPtr command) {
@@ -23,15 +43,28 @@ void ConsoleShell::setupCommands() {
     registerCommand(std::make_unique<InitializeCommand>());
     registerCommand(std::make_unique<ScreenCommand>());
     registerCommand(std::make_unique<ProcessSmiCommand>());
-
+    registerCommand(std::make_unique<SchedulerStartCommand>());
+    registerCommand(std::make_unique<SchedulerStopCommand>());
+    registerCommand(std::make_unique<ReportUtilCommand>());
 }
 
 Process* ConsoleShell::findProcess(const std::string& name) {
+    // 1. Check local manual process tracker first
     for (auto& proc : m_processList) {
         if (proc->getName() == name) {
             return proc.get();
         }
     }
+
+    if (m_scheduler) {
+        auto tracked = m_scheduler->getAllTrackedProcesses();
+        for (auto& proc : tracked) {
+            if (proc->getName() == name) {
+                return proc.get();
+            }
+        }
+    }
+    
     return nullptr;
 }
 
@@ -40,7 +73,6 @@ std::vector<std::string> ConsoleShell::tokenizeInput(const std::string& rawInput
     std::stringstream ss(rawInput);
     std::string token;
 
-    // Split input line by blank spaces
     while (ss >> token) {
         tokens.push_back(token);
     }
@@ -64,26 +96,10 @@ std::string ConsoleShell::getAttachedProcess() const {
 }
 
 void ConsoleShell::run() {
-    std::cout << "  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$  /$$$$$$  /$$     /$$\n";
-    std::cout << " /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/ /$$__  $$|  $$   /$$/\n";
-    std::cout << "| $$  \\__/| $$  \\__/| $$  \\ $$| $$  \\ $$| $$      | $$  \\__/ \\  $$ /$$/ \n";
-    std::cout << "| $$      |  $$$$$$ | $$  | $$| $$$$$$$/| $$$$$   |  $$$$$$   \\  $$$$/  \n";
-    std::cout << "| $$       \\____  $$| $$  | $$| $$____/ | $$__/    \\____  $$   \\  $$/   \n";
-    std::cout << "| $$    $$ /$$  \\ $$| $$  | $$| $$      | $$       /$$  \\ $$    | $$    \n";
-    std::cout << "|  $$$$$$/|  $$$$$$/|  $$$$$$/| $$      | $$$$$$$$|  $$$$$$/    | $$    \n";
-    std::cout << " \\______/  \\______/  \______/ |__/      |________/ \\______/     |__/    \n";
-                                                                        
-                                                                        
-                                                                        
-    std::cout << "Welcome to CSOPESY Emulator!\n";
-    std::cout << "Developers:\n     Lazaro, Heisel Janine C. \n     Tria, Chynna Mae Z. \n     Umali, Immanuel Z. \n";
-    std::cout << "Last updated: 06-21-2026\n";
-    std::cout << "___________________________________________\n\n";
-
+    printMainMenu();
 
     std::string rawInputLine;
 
-   
     while (!shouldExit()) {
         // Adjust the console interface prompt dynamically based on view state
         if (m_currentView == TerminalView::MAIN_MENU) {
@@ -105,8 +121,11 @@ void ConsoleShell::run() {
         // View Context Rules Engine Intervention
         if (m_currentView == TerminalView::SCREEN_MULTIPLEXER) {
             if (commandToken == "exit") {
-                // Intercept 'exit' inside process sub-screens to return to main menu
-                std::cout << "Exiting process screen view and returning to main menu.\n" << std::endl;
+
+                ClearTerminal();
+                printMainMenu();
+
+                std::cout << "Welcome back to the main menu.\n" << std::endl;
                 m_currentView = TerminalView::MAIN_MENU;
                 m_attachedProcessName = "";
                 continue;

@@ -33,7 +33,6 @@ public:
             return;
         }
 
-        // Apply configuration states to system context environment
         context.setConfig(parsedConfig);
         context.setInitialized(true);
 
@@ -46,5 +45,16 @@ public:
         std::cout << " Instruction Ranges  : [" << parsedConfig.minIns << ", " << parsedConfig.maxIns << "]\n";
         std::cout << " Execution Delay     : " << parsedConfig.delayPerExec << "\n";
         std::cout << "-------------------------------------------\n" << std::endl;
+
+        auto scheduler = std::make_shared<Scheduler>(
+            parsedConfig.scheduler,
+            parsedConfig.numCpu,
+            parsedConfig.quantumCycles,
+            parsedConfig.delayPerExec
+        );
+
+        context.setScheduler(scheduler);
+        scheduler->start();
+        std::cout << "Background scheduler thread spawned successfully!\n" << std::endl;
     }
 };
