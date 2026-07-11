@@ -8,7 +8,7 @@ Scheduler::Scheduler(const std::string& type, int numCpu, unsigned int quantum, 
     m_delayPerExec(delayPerExec),
     m_cpuCycles(0),
     m_running(false),
-    m_memoryManager(memManager) // Hook up the memory manager
+    m_memoryManager(memManager)
 {
     for (int i = 0; i < numCpu; ++i) {
         m_cpuCores.emplace_back(i);
@@ -39,9 +39,11 @@ void Scheduler::addProcess(std::shared_ptr<Process> process) {
     std::lock_guard<std::mutex> lock(m_schedulerMutex);
     std::lock_guard<std::mutex> memLock(m_memoryMutex);
 
+    m_allTrackedProcesses.push_back(process); // ALWAYS track it, even if memory fails
+
     // 1. Try allocating memory first
     if (m_memoryManager && m_memoryManager->allocate(process->getName())) {
-        m_allTrackedProcesses.push_back(process);
+        process->setState(ProcessState::READY); // Explicitly mark ready
 
         if (m_schedulerType == "fcfs") {
             m_fcfsScheduler.addProcess(process);
@@ -51,8 +53,8 @@ void Scheduler::addProcess(std::shared_ptr<Process> process) {
         }
     }
     else {
-        // Log or handle "Out of Memory" state for this process
-        process->setState(ProcessState::WAITING); // Assuming WAITING exists for OOM
+        // Not enough memory; put in waiting state to be retried later
+        process->setState(ProcessState::WAITING);
     }
 }
 
@@ -61,7 +63,6 @@ void Scheduler::threadLoop() {
         m_cpuCycles++;
 
         // Automated Process Generation
-        // Inside Scheduler::threadLoop() under Automated Process Generation:
         if (m_generationEnabled.load()) {
             if (m_cpuCycles.load() % m_batchProcessFreq == 0) {
                 int pid = ++m_generatedPidCounter;
@@ -73,10 +74,10 @@ void Scheduler::threadLoop() {
                     std::lock_guard<std::mutex> lock(m_schedulerMutex);
                     std::lock_guard<std::mutex> memLock(m_memoryMutex);
 
-                    // Verify memory budget before making it runnable
+                    m_allTrackedProcesses.push_back(batchProc); // ALWAYS track it
+
                     if (m_memoryManager && m_memoryManager->allocate(batchProc->getName())) {
                         batchProc->setState(ProcessState::READY);
-                        m_allTrackedProcesses.push_back(batchProc);
 
                         if (m_schedulerType == "fcfs") {
                             m_fcfsScheduler.addProcess(batchProc);
@@ -86,23 +87,33 @@ void Scheduler::threadLoop() {
                         }
                     }
                     else {
-                        // System is out of memory; drop or store in a separate backed-up queue
+                        batchProc->setState(ProcessState::WAITING); // Queue for later
                     }
                 }
             }
         }
 
-        // Variable tracking if work was actually managed this cycle
-        // Variable tracking if work was actually managed this cycle
         bool activeWorkDone = false;
 
         // Scope lock for core pipeline operations
         {
             std::lock_guard<std::mutex> lock(m_schedulerMutex);
-            std::lock_guard<std::mutex> memLock(m_memoryMutex); // Protect shared memory structures
+            std::lock_guard<std::mutex> memLock(m_memoryMutex);
+
+            // NEW: Scan for waiting processes and try to allocate them now that memory might be free
+            for (auto& p : m_allTrackedProcesses) {
+                if (p->getState() == ProcessState::WAITING) {
+                    if (m_memoryManager && m_memoryManager->allocate(p->getName())) {
+                        p->setState(ProcessState::READY);
+                        if (m_schedulerType == "fcfs") m_fcfsScheduler.addProcess(p);
+                        else if (m_schedulerType == "rr") m_rrScheduler.addProcess(p);
+                    }
+                }
+            }
 
             for (auto& cpu : m_cpuCores) {
                 if (m_schedulerType == "fcfs") {
+
                     // 1. If core is idle, pull a process
                     if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
                         auto proc = m_fcfsScheduler.getNextProcess();
@@ -112,23 +123,24 @@ void Scheduler::threadLoop() {
                         }
                     }
 
-                    // 2. Execute work if a process is assigned
-                    if (!cpu.isIdle()) {
+                    // 2. Fetch process pointer BEFORE execution to ensure we don't lose it
+                    auto process = cpu.getCurrentProcess();
+
+                    // 3. Execute and Check
+                    if (process) {
                         activeWorkDone = true;
                         cpu.executeCycle();
-                    }
 
-                    // 3. HOOK: Check if the process finished during this cycle
-                    auto process = cpu.getCurrentProcess();
-                    if (process && process->isFinished()) {
-                        if (m_memoryManager) {
-                            m_memoryManager->deallocate(process->getName());
+                        if (process->isFinished()) {
+                            if (m_memoryManager) {
+                                m_memoryManager->deallocate(process->getName());
+                            }
+                            process->setState(ProcessState::FINISHED);
+                            cpu.assignProcess(nullptr);
                         }
-                        process->setState(ProcessState::FINISHED); // Explicitly update state
-                        cpu.assignProcess(nullptr);                // Free up the core
                     }
 
-                    // 4. Backfill core immediately if it just became idle
+                    // 4. Backfill core immediately
                     if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
                         auto proc = m_fcfsScheduler.getNextProcess();
                         if (proc) {
@@ -138,6 +150,7 @@ void Scheduler::threadLoop() {
                     }
                 }
                 else if (m_schedulerType == "rr") {
+
                     // 1. If core is idle, pull a process
                     if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
                         auto proc = m_rrScheduler.getNextProcess();
@@ -148,17 +161,15 @@ void Scheduler::threadLoop() {
                         cpu.resetCyclesExecuted();
                     }
 
-                    // 2. Execute work if a process is assigned
-                    if (!cpu.isIdle()) {
+                    // 2. Fetch process pointer BEFORE execution
+                    auto process = cpu.getCurrentProcess();
+
+                    // 3. Execute and Check
+                    if (process) {
                         activeWorkDone = true;
                         cpu.executeCycle();
-                    }
 
-                    // 3. HOOK: Check if it finished OR if its time quantum expired
-                    auto process = cpu.getCurrentProcess();
-                    if (process) {
                         if (process->isFinished()) {
-                            // Process completed -> Free memory completely
                             if (m_memoryManager) {
                                 m_memoryManager->deallocate(process->getName());
                             }
@@ -167,7 +178,6 @@ void Scheduler::threadLoop() {
                             cpu.resetCyclesExecuted();
                         }
                         else if (cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
-                            // Quantum expired but process isn't done -> Retain memory, re-queue to ready queue
                             process->setState(ProcessState::READY);
                             m_rrScheduler.addProcess(process);
                             cpu.assignProcess(nullptr);
@@ -175,7 +185,7 @@ void Scheduler::threadLoop() {
                         }
                     }
 
-                    // 4. Backfill core immediately if it just became idle
+                    // 4. Backfill core immediately
                     if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
                         auto proc = m_rrScheduler.getNextProcess();
                         if (proc) {
@@ -188,8 +198,6 @@ void Scheduler::threadLoop() {
             }
         }
 
-        // If the system has 0 delay and nothing is runnable, yield CPU slice 
-        // to let dashboard rendering commands print cleanly without thread choking
         if (m_delayPerExec == 0) {
             if (!activeWorkDone) {
                 std::this_thread::yield();
