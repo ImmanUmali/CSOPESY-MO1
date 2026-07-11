@@ -3,8 +3,6 @@
 #include "ICommand.h"
 #include "ISystemContext.h"
 #include "ConfigLoader.h"
-#include "ConsoleShell.h"      // Cast to access custom ConsoleShell setters
-#include "MemoryManager.h"
 #include <iostream>
 
 class ExitCommand : public ICommand {
@@ -38,10 +36,6 @@ public:
         context.setConfig(parsedConfig);
         context.setInitialized(true);
 
-        ConsoleShell& shell = static_cast<ConsoleShell&>(context);
-        auto memManager = std::make_unique<MemoryManager>(parsedConfig.maxOverallMem, parsedConfig.memPerProc);
-        shell.setMemoryManager(std::move(memManager));
-
         std::cout << "System initialized successfully via 'config.txt'!\n";
         std::cout << "-------------------------------------------\n";
         std::cout << " Cores Available     : " << parsedConfig.numCpu << "\n";
@@ -50,11 +44,7 @@ public:
         std::cout << " Batch Process Freq  : " << parsedConfig.batchProcessFreq << "\n";
         std::cout << " Instruction Ranges  : [" << parsedConfig.minIns << ", " << parsedConfig.maxIns << "]\n";
         std::cout << " Execution Delay     : " << parsedConfig.delayPerExec << "\n";
-        std::cout << " Max Overall Memory  : " << parsedConfig.maxOverallMem << " bytes\n";
-        std::cout << " Memory Per Frame    : " << parsedConfig.memPerFrame << " bytes\n";
-        std::cout << " Fixed Memory / Proc : " << parsedConfig.memPerProc << " bytes\n";
-        std::cout << "-------------------------------------------\n";
-        std::cout << "First-Fit Memory Partitioning initialized.\n" << std::endl;
+        std::cout << "-------------------------------------------\n" << std::endl;
 
         auto scheduler = std::make_shared<Scheduler>(
             parsedConfig.scheduler,
