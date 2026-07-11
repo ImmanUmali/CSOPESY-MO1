@@ -97,7 +97,16 @@ void MemoryManager::generateSnapshot(uint32_t currentQuantum) const {
 
     // 2. Get formatted timestamp: (MM/DD/YYYY HH:MM:SSAM/PM)
     std::time_t now = std::time(nullptr);
-    std::tm* ltm = std::localtime(&now);
+    std::tm ltm_store;
+    std::tm* ltm = &ltm_store;
+
+#ifdef _WIN32
+    if (localtime_s(&ltm_store, &now) != 0) return;
+#else
+    ltm = std::localtime(&now);
+    if (!ltm) return;
+#endif
+
     char timeBuffer[40];
     
     // Determine AM/PM
