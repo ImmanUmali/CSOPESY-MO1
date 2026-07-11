@@ -38,9 +38,11 @@ public:
         context.setConfig(parsedConfig);
         context.setInitialized(true);
 
+        
+        auto memManager = std::make_shared<MemoryManager>(parsedConfig.maxOverallMem, parsedConfig.memPerProc);
+
         ConsoleShell& shell = static_cast<ConsoleShell&>(context);
-        auto memManager = std::make_unique<MemoryManager>(parsedConfig.maxOverallMem, parsedConfig.memPerProc);
-        shell.setMemoryManager(std::move(memManager));
+        shell.setMemoryManager(memManager);
 
         std::cout << "System initialized successfully via 'config.txt'!\n";
         std::cout << "-------------------------------------------\n";
@@ -56,14 +58,12 @@ public:
         std::cout << "-------------------------------------------\n";
         std::cout << "First-Fit Memory Partitioning initialized.\n" << std::endl;
 
-        auto memManager = std::make_shared<MemoryManager>(parsedConfig.maxOverallMem, parsedConfig.memPerFrame); // (Use whatever arguments your config actually has)
-
         auto scheduler = std::make_shared<Scheduler>(
             parsedConfig.scheduler,
             parsedConfig.numCpu,
             parsedConfig.quantumCycles,
             parsedConfig.delayPerExec,
-            memManager // Now the types match perfectly!
+            memManager 
         );
 
         context.setScheduler(scheduler);
