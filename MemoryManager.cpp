@@ -74,13 +74,70 @@ size_t MemoryManager::getNumProcessesInMemory() const {
 }
 
 uint32_t MemoryManager::calculateExternalFragmentation() const {
-    // External fragmentation is defined as the sum of all free blocks 
-    // that are too small to satisfy the allocation requirements (less than 4,096 bytes)
-    uint32_t fragSum = 0;
+    uint32_t totalFreeBytes = 0;
+    
+    // Sum up ALL unallocated memory space
     for (const auto& block : m_blocks) {
-        if (!block.isAllocated && block.size < m_memPerProc) {
-            fragSum += block.size;
+        if (!block.isAllocated) {
+            totalFreeBytes += block.size;
         }
     }
-    return fragSum;
+    
+    // Convert bytes to KB (e.g., 8192 bytes / 1024 = 8 KB)
+    return totalFreeBytes / 1024;
+}
+
+// Add this to the very bottom of memorymanager.cpp
+
+void MemoryManager::generateSnapshot(uint32_t currentQuantum) const {
+    // 1. Generate filename: memory_stamp_<qq>.txt
+    std::string filename = "memory_stamp_" + std::to_string(currentQuantum) + ".txt";
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) return;
+
+    // 2. Get formatted timestamp: (MM/DD/YYYY HH:MM:SSAM/PM)
+    std::time_t now = std::time(nullptr);
+    std::tm* ltm = std::localtime(&now);
+    char timeBuffer[40];
+    
+    // Determine AM/PM
+    const char* ampm = (ltm->tm_hour >= 12) ? "PM" : "AM";
+    int hour12 = ltm->tm_hour % 12;
+    if (hour12 == 0) hour12 = 12;
+
+    std::snprintf(timeBuffer, sizeof(timeBuffer), "(%02d/%02d/%04d %02d:%02d:%02d%s)",
+                 ltm->tm_mon + 1, ltm->tm_mday, ltm->tm_year + 1900,
+                 hour12, ltm->tm_min, ltm->tm_sec, ampm);
+
+    // 3. Gather stats
+    size_t activeProcesses = getNumProcessesInMemory();
+    uint32_t fragBytes = calculateExternalFragmentation();
+
+    // 4. Print Header
+    outFile << "Timestamp: " << timeBuffer << "\n";
+    outFile << "Number of processes in memory: " << activeProcesses << "\n";
+    outFile << "Total external fragmentation in KB: " << fragBytes << "\n\n";
+
+    // 5. Inverted ASCII Printout (From end address 16384 down to 0)
+    outFile << "----end---- = " << m_maxOverallMem << "\n\n";
+
+    // Loop backward to match mockup layout (high addresses on top)
+    for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); ++it) {
+        uint32_t upperLimit = it->startAddress + it->size;
+        uint32_t lowerLimit = it->startAddress;
+
+        outFile << upperLimit << "\n";
+        if (it->isAllocated) {
+            // Convert process name to uppercase if desired to match "P1", "P9"
+            std::string name = it->assignedProcessName;
+            for (auto& c : name) c = std::toupper(c);
+            outFile << name << "\n";
+        } else {
+            outFile << "Free Space\n"; // Or leave a blank line depending on preference
+        }
+        outFile << lowerLimit << "\n\n";
+    }
+
+    outFile << "----start----- = 0\n";
+    outFile.close();
 }

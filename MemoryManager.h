@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <fstream> 
+#include <iomanip>
+#include <ctime>
 
 class MemoryManager {
 private:
@@ -22,4 +25,5 @@ public:
     size_t getNumProcessesInMemory() const;
     uint32_t calculateExternalFragmentation() const;
     const std::vector<MemoryBlock>& getBlocks() const { return m_blocks; }
+    void generateSnapshot(uint32_t currentQuantum) const;
 };

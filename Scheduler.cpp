@@ -180,6 +180,15 @@ void Scheduler::threadLoop() {
                         else if (cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
                             process->setState(ProcessState::READY);
                             m_rrScheduler.addProcess(process);
+
+                            static uint32_t realQuantumCycle = 0;
+                            realQuantumCycle += m_rrScheduler.getQuantum(); 
+
+                            if (m_memoryManager) {
+                                // Pass our clean counter instead of m_cpuCycles
+                                m_memoryManager->generateSnapshot(realQuantumCycle);
+                            }
+
                             cpu.assignProcess(nullptr);
                             cpu.resetCyclesExecuted();
                         }
