@@ -7,6 +7,7 @@
 #include "CPUCore.h"
 #include "FCFS.h"
 #include "RR.h"
+#include "MemoryManager.h"
 
 class Scheduler {
 private:
@@ -15,6 +16,8 @@ private:
     FCFSScheduler m_fcfsScheduler;           // Ready Queue owned here
     RoundRobinScheduler m_rrScheduler;       // Ready Queue owned here
     unsigned int m_delayPerExec;
+    std::shared_ptr<MemoryManager> m_memoryManager;
+    std::mutex m_memoryMutex;
 
     // Threading & Counters
     std::atomic<unsigned int> m_cpuCycles;   // Master CPU cycle counter
@@ -33,7 +36,7 @@ private:
     void threadLoop();                       // Background execution loop
 
 public:
-    Scheduler(const std::string& type, int numCpu, unsigned int quantum, unsigned int delayPerExec);
+    Scheduler(const std::string& type, int numCpu, unsigned int quantum, unsigned int delayPerExec, std::shared_ptr<MemoryManager> memManager);
     ~Scheduler();
 
     void start();                            // Spins up the background thread

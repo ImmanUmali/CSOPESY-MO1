@@ -56,11 +56,14 @@ public:
         std::cout << "-------------------------------------------\n";
         std::cout << "First-Fit Memory Partitioning initialized.\n" << std::endl;
 
+        auto memManager = std::make_shared<MemoryManager>(parsedConfig.maxOverallMem, parsedConfig.memPerFrame); // (Use whatever arguments your config actually has)
+
         auto scheduler = std::make_shared<Scheduler>(
             parsedConfig.scheduler,
             parsedConfig.numCpu,
             parsedConfig.quantumCycles,
-            parsedConfig.delayPerExec
+            parsedConfig.delayPerExec,
+            memManager // Now the types match perfectly!
         );
 
         context.setScheduler(scheduler);

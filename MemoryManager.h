@@ -15,8 +15,8 @@ public:
     ~MemoryManager() = default;
 
     // Core first-fit logic
-    bool allocateFirstFit(const std::string& processName);
-    void freeMemory(const std::string& processName);
+    bool allocate(const std::string& processName);
+    void deallocate(const std::string& processName);
 
     // Helpers for reporting metrics in Phase 4
     size_t getNumProcessesInMemory() const;

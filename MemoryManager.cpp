@@ -7,7 +7,7 @@ MemoryManager::MemoryManager(uint32_t maxOverallMem, uint32_t memPerProc)
     m_blocks.push_back({ 0, m_maxOverallMem, false, "" });
 }
 
-bool MemoryManager::allocateFirstFit(const std::string& processName) {
+bool MemoryManager::allocate(const std::string& processName) {
     // 1. Search sequentially from the beginning for the first free block that fits
     for (size_t i = 0; i < m_blocks.size(); ++i) {
         if (!m_blocks[i].isAllocated && m_blocks[i].size >= m_memPerProc) {
@@ -42,7 +42,7 @@ bool MemoryManager::allocateFirstFit(const std::string& processName) {
     return false; // Insufficient continuous space available (Memory Full)
 }
 
-void MemoryManager::freeMemory(const std::string& processName) {
+void MemoryManager::deallocate(const std::string& processName) {
     // 1. Locate the process block and mark it as free
     for (auto& block : m_blocks) {
         if (block.isAllocated && block.assignedProcessName == processName) {
