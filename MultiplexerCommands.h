@@ -45,14 +45,18 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
     out << "Running processes:\n";
     for (const auto& proc : trackingList) {
         if (!proc->isFinished()) {
-            std::string coreDisplay = "Core: N/A"; // If a process is READY but not assigned to a core yet
+            std::string coreDisplay = "Core: N/A";
+
             for (const auto& core : cores) {
-                if (!core.isIdle() && core.getCurrentProcess() && core.getCurrentProcess()->getPid() == proc->getPid()) {
-                    coreDisplay = "Core # " + std::to_string(core.getId());
-                    break;
+                if (!core.isIdle()) {
+                    // Pin the shared pointer locally so it doesn't mutate or expire mid-check
+                    auto activeProc = core.getCurrentProcess();
+                    if (activeProc && activeProc->getPid() == proc->getPid()) {
+                        coreDisplay = "Core # " + std::to_string(core.getId());
+                        break;
+                    }
                 }
             }
-
 
             out << std::left << std::setw(12) << proc->getName()
                 << " (" << proc->getTimestamp() << ")    "
