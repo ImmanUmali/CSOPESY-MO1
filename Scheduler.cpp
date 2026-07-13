@@ -36,7 +36,7 @@ void Scheduler::stop() {
 
 void Scheduler::addProcess(std::shared_ptr<Process> process) {
     std::lock_guard<std::mutex> lock(m_schedulerMutex);
-    
+
     // Track globally for reporting metrics
     m_allTrackedProcesses.push_back(process);
 
@@ -84,22 +84,24 @@ void Scheduler::threadLoop() {
         {
             std::lock_guard<std::mutex> lock(m_schedulerMutex);
 
-            for (auto& cpu : m_cpuCores) {
-                if (m_schedulerType == "fcfs") {
-                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
-                        auto proc = m_fcfsScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
-                    }
+            if (m_schedulerType == "fcfs") {
 
+                for (auto& cpu : m_cpuCores) {
                     if (!cpu.isIdle()) {
                         activeWorkDone = true;
                         cpu.executeCycle();
-                    }
 
-                    if (cpu.isIdle() && m_fcfsScheduler.hasProcess()) {
+                        auto process = cpu.getCurrentProcess();
+                        if (process && process->isFinished()) {
+                            process->setState(ProcessState::FINISHED);
+                            cpu.assignProcess(nullptr);
+                            cpu.resetCyclesExecuted();
+                        }
+                    }
+                }
+
+                for (auto& cpu : m_cpuCores) {
+                    if (cpu.isIdle()) {
                         auto proc = m_fcfsScheduler.getNextProcess();
                         if (proc) {
                             proc->setState(ProcessState::RUNNING);
@@ -107,41 +109,47 @@ void Scheduler::threadLoop() {
                         }
                     }
                 }
-                else if (m_schedulerType == "rr") {
-                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
-                        auto proc = m_rrScheduler.getNextProcess();
-                        if (proc) {
-                            proc->setState(ProcessState::RUNNING);
-                            cpu.assignProcess(proc);
-                        }
-                        cpu.resetCyclesExecuted();
-                    }
+            }
 
+            else if (m_schedulerType == "rr") {
+
+                for (auto& cpu : m_cpuCores) {
                     if (!cpu.isIdle()) {
                         activeWorkDone = true;
                         cpu.executeCycle();
                     }
+                }
 
+                for (auto& cpu : m_cpuCores) {
                     auto process = cpu.getCurrentProcess();
 
-                    // Handle Quantum Expiry Preemption Safely
-                    if (process && cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
-                        if (!process->isFinished()) {
-                            // Flip state back to READY before re-queuing
-                            process->setState(ProcessState::READY);
-                            m_rrScheduler.addProcess(process);
-                        }
+                    if (!process)
+                        continue;
+
+                    // Finished processes have priority
+                    if (process->isFinished()) {
+                        process->setState(ProcessState::FINISHED);
                         cpu.assignProcess(nullptr);
                         cpu.resetCyclesExecuted();
                     }
+                    // Otherwise, check quantum expiry
+                    else if (cpu.getCyclesExecuted() >= m_rrScheduler.getQuantum()) {
+                        process->setState(ProcessState::READY);
+                        m_rrScheduler.addProcess(process);
 
-                    if (cpu.isIdle() && m_rrScheduler.hasProcess()) {
+                        cpu.assignProcess(nullptr);
+                        cpu.resetCyclesExecuted();
+                    }
+                }
+
+                for (auto& cpu : m_cpuCores) {
+                    if (cpu.isIdle()) {
                         auto proc = m_rrScheduler.getNextProcess();
                         if (proc) {
                             proc->setState(ProcessState::RUNNING);
                             cpu.assignProcess(proc);
+                            cpu.resetCyclesExecuted();
                         }
-                        cpu.resetCyclesExecuted();
                     }
                 }
             }

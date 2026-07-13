@@ -43,22 +43,19 @@ inline void GenerateReportStream(std::ostream& out, ConsoleShell& shell) {
 
     // Display process status if running
     out << "Running processes:\n";
-    for (const auto& proc : trackingList) {
-        if (!proc->isFinished()) {
-            std::string coreDisplay = "Core: N/A"; // If a process is READY but not assigned to a core yet
-            for (const auto& core : cores) {
-                if (!core.isIdle() && core.getCurrentProcess() && core.getCurrentProcess()->getPid() == proc->getPid()) {
-                    coreDisplay = "Core # " + std::to_string(core.getId());
-                    break;
-                }
-            }
+    for (const auto& core : cores) {
+        if (core.isIdle())
+            continue;
 
+        auto proc = core.getCurrentProcess();
+        if (!proc)
+            continue;
 
-            out << std::left << std::setw(12) << proc->getName()
-                << " (" << proc->getTimestamp() << ")    "
-                << std::left << std::setw(12) << coreDisplay
-                << proc->getCommandCounter() << " / " << proc->getLinesOfCode() << "\n";
-        }
+        out << std::left << std::setw(12) << proc->getName()
+            << " (" << proc->getTimestamp() << ")    "
+            << "Core # " << core.getId() << "    "
+            << proc->getCommandCounter() << " / "
+            << proc->getLinesOfCode() << "\n";
     }
 
     // Display process status if finished

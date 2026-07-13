@@ -16,13 +16,7 @@ void CPUCore::executeCycle() {
     if (isIdle()) return;
 
     m_cyclesExecuted++;
-
     m_currentProcess->executeNextLine(m_id);
-
-    if (m_currentProcess->isFinished()) {
-        m_currentProcess->setState(ProcessState::FINISHED);
-        m_currentProcess = nullptr; 
-    }
 }
 
 std::shared_ptr<Process> CPUCore::getCurrentProcess() const {
