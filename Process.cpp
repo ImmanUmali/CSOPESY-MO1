@@ -107,6 +107,11 @@ void Process::evaluateInstruction(const Instruction& ins, int coreId) {
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int initialVal = ins.args.size() < 2 ? 0 : std::stoi(ins.args[1]);
         m_symbolTable[varName] = initialVal;
+        // Print the declaration result to the process screen log history
+        std::stringstream formattedLog;
+        formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
+            << "[DECLARE] " << varName << " initialized to " << initialVal;
+        addLog(formattedLog.str());
         break;
     }
     case OpCode::ADD: {
@@ -114,6 +119,11 @@ void Process::evaluateInstruction(const Instruction& ins, int coreId) {
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
         m_symbolTable[varName] += val;
+        // Print the math result to the process screen log history
+        std::stringstream formattedLog;
+        formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
+            << "[ADD] " << varName << " + " << val << " = " << m_symbolTable[varName];
+        addLog(formattedLog.str());
         break;
     }
     case OpCode::SUBTRACT: {
@@ -121,6 +131,11 @@ void Process::evaluateInstruction(const Instruction& ins, int coreId) {
         std::string varName = ins.args.empty() ? "var" : ins.args[0];
         int val = ins.args.size() < 2 ? 1 : std::stoi(ins.args[1]);
         m_symbolTable[varName] -= val;
+        // Print the math result to the process screen log history
+        std::stringstream formattedLog;
+        formattedLog << "(" << getCurrentTimestampString() << ") Core:" << coreId << " "
+            << "[SUBTRACT] " << varName << " - " << val << " = " << m_symbolTable[varName];
+        addLog(formattedLog.str());
         break;
     }
     case OpCode::SLEEP: {
